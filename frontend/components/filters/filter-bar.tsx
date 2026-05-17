@@ -71,7 +71,7 @@ export function FilterBar({ fields = ["periodo", "campanha", "operador", "qualif
                 <Label className="text-xs text-muted-foreground">Campanha</Label>
                 <Select
                   value={filters.campanha ?? "all"}
-                  onValueChange={(v) => setFilters({ campanha: v === "all" ? undefined : v })}
+                  onValueChange={(v) => setFilters({ campanha: !v || v === "all" ? undefined : v })}
                   disabled={isLoading}
                 >
                   <SelectTrigger className="h-9 w-48">
@@ -92,7 +92,7 @@ export function FilterBar({ fields = ["periodo", "campanha", "operador", "qualif
                 <Label className="text-xs text-muted-foreground">Operador</Label>
                 <Select
                   value={filters.operador ?? "all"}
-                  onValueChange={(v) => setFilters({ operador: v === "all" ? undefined : v })}
+                  onValueChange={(v) => setFilters({ operador: !v || v === "all" ? undefined : v })}
                   disabled={isLoading}
                 >
                   <SelectTrigger className="h-9 w-48">
@@ -113,7 +113,7 @@ export function FilterBar({ fields = ["periodo", "campanha", "operador", "qualif
                 <Label className="text-xs text-muted-foreground">Qualificação</Label>
                 <Select
                   value={filters.qualificacao ?? "all"}
-                  onValueChange={(v) => setFilters({ qualificacao: v === "all" ? undefined : v })}
+                  onValueChange={(v) => setFilters({ qualificacao: !v || v === "all" ? undefined : v })}
                   disabled={isLoading}
                 >
                   <SelectTrigger className="h-9 w-48">

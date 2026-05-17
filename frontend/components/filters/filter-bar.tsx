@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 
 interface FilterBarProps {
-  fields?: ("periodo" | "campanha" | "operador" | "qualificacao")[]
+  fields?: ("periodo" | "campanha" | "operador" | "qualificacao" | "resultado" | "operadora")[]
 }
 
 export function FilterBar({ fields = ["periodo", "campanha", "operador", "qualificacao"] }: FilterBarProps) {
@@ -62,7 +62,7 @@ export function FilterBar({ fields = ["periodo", "campanha", "operador", "qualif
         )}
       </div>
 
-      {(show("campanha") || show("operador") || show("qualificacao")) && (
+      {(show("campanha") || show("operador") || show("qualificacao") || show("resultado") || show("operadora")) && (
         <>
           <Separator />
           <div className="flex flex-wrap gap-3 items-end">
@@ -126,6 +126,29 @@ export function FilterBar({ fields = ["periodo", "campanha", "operador", "qualif
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+            {show("resultado") && (
+              <div className="space-y-1 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Resultado</Label>
+                <Input
+                  value={filters.resultado ?? ""}
+                  onChange={(e) => setFilters({ resultado: e.target.value || undefined })}
+                  placeholder="ex: ATENDIDA"
+                  className="h-9 w-48"
+                />
+              </div>
+            )}
+
+            {show("operadora") && (
+              <div className="space-y-1 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Operadora</Label>
+                <Input
+                  value={filters.operadora ?? ""}
+                  onChange={(e) => setFilters({ operadora: e.target.value || undefined })}
+                  placeholder="ex: CLARO"
+                  className="h-9 w-48"
+                />
               </div>
             )}
           </div>

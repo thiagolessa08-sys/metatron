@@ -13,6 +13,7 @@ import {
   List,
   Radio,
   TrendingUp,
+  PhoneCall,
 } from "lucide-react"
 
 const NAV_ITEMS = [
@@ -55,6 +56,13 @@ const NAV_ITEMS = [
     href: "/agentes",
     label: "Agentes",
     icon: Users,
+    roles: ["gestor", "admin"],
+    group: "Análise",
+  },
+  {
+    href: "/relatorios/chamadas",
+    label: "Chamadas",
+    icon: PhoneCall,
     roles: ["gestor", "admin"],
     group: "Análise",
   },

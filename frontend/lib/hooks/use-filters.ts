@@ -9,6 +9,8 @@ export interface Filters {
   campanha?: string
   operador?: string
   qualificacao?: string
+  resultado?: string
+  operadora?: string
 }
 
 function today() {
@@ -30,6 +32,8 @@ export function useFilters(): [Filters, (f: Partial<Filters>) => void] {
     campanha: params.get("campanha") ?? undefined,
     operador: params.get("operador") ?? undefined,
     qualificacao: params.get("qualificacao") ?? undefined,
+    resultado: params.get("resultado") ?? undefined,
+    operadora: params.get("operadora") ?? undefined,
   }
 
   const setFilters = useCallback(

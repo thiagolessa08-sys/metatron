@@ -15,7 +15,7 @@ export function FilterBar({ fields = ["periodo", "campanha", "operador", "qualif
   const [filters, setFilters] = useFilters()
   const { data: options, isLoading } = useFilterOptions()
 
-  const show = (f: string) => fields.includes(f as keyof typeof fields)
+  const show = (f: string) => (fields as string[]).includes(f)
 
   return (
     <div className="bg-card border rounded-lg p-4 space-y-4">

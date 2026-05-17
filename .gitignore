@@ -1,0 +1,45 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+.npm
+*.tsbuildinfo
+next-env.d.ts
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.pyc
+
+# Env
+.env
+.env.local
+.env.*.local
+*.env
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Railway / Docker
+*.log
+
+# Alembic
+backend/alembic/versions/*.pyc
+
+# Dev
+dev.db
+*.sqlite3

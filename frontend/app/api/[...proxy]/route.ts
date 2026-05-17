@@ -8,40 +8,33 @@ async function forward(req: NextRequest, segments: string[]): Promise<NextRespon
 
   const headers: Record<string, string> = {}
   req.headers.forEach((v, k) => {
-    if (!["host", "connection", "transfer-encoding"].includes(k)) headers[k] = v
+    if (!["host", "connection", "transfer-encoding", "content-length"].includes(k)) headers[k] = v
   })
 
-  const res = await fetch(url, {
-    method: req.method,
-    headers,
-    ...(hasBody ? { body: req.body, duplex: "half" } : {}),
-  } as RequestInit)
+  try {
+    const body = hasBody ? await req.text() : undefined
+    const res = await fetch(url, { method: req.method, headers, body })
 
-  const resHeaders = new Headers()
-  res.headers.forEach((v, k) => {
-    if (k !== "transfer-encoding") resHeaders.set(k, v)
-  })
+    const resHeaders = new Headers()
+    res.headers.forEach((v, k) => {
+      if (!["transfer-encoding", "content-encoding"].includes(k)) resHeaders.set(k, v)
+    })
 
-  return new NextResponse(res.body, { status: res.status, headers: resHeaders })
+    const respBody = await res.arrayBuffer()
+    return new NextResponse(respBody, { status: res.status, headers: resHeaders })
+  } catch (err) {
+    return NextResponse.json(
+      { error: "proxy_failed", detail: String(err), backend: BACKEND, target: url },
+      { status: 502 }
+    )
+  }
 }
 
 type Ctx = { params: Promise<{ proxy: string[] }> }
 
-export async function GET(req: NextRequest, ctx: Ctx) {
-  return forward(req, (await ctx.params).proxy)
-}
-export async function POST(req: NextRequest, ctx: Ctx) {
-  return forward(req, (await ctx.params).proxy)
-}
-export async function PUT(req: NextRequest, ctx: Ctx) {
-  return forward(req, (await ctx.params).proxy)
-}
-export async function PATCH(req: NextRequest, ctx: Ctx) {
-  return forward(req, (await ctx.params).proxy)
-}
-export async function DELETE(req: NextRequest, ctx: Ctx) {
-  return forward(req, (await ctx.params).proxy)
-}
-export async function OPTIONS(req: NextRequest, ctx: Ctx) {
-  return forward(req, (await ctx.params).proxy)
-}
+export async function GET(req: NextRequest, ctx: Ctx) { return forward(req, (await ctx.params).proxy) }
+export async function POST(req: NextRequest, ctx: Ctx) { return forward(req, (await ctx.params).proxy) }
+export async function PUT(req: NextRequest, ctx: Ctx) { return forward(req, (await ctx.params).proxy) }
+export async function PATCH(req: NextRequest, ctx: Ctx) { return forward(req, (await ctx.params).proxy) }
+export async function DELETE(req: NextRequest, ctx: Ctx) { return forward(req, (await ctx.params).proxy) }
+export async function OPTIONS(req: NextRequest, ctx: Ctx) { return forward(req, (await ctx.params).proxy) }

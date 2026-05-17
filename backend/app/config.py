@@ -14,6 +14,16 @@ class Settings(BaseSettings):
     # Banco do dashboard
     database_url: str = "sqlite:///./dev.db"
 
+    @property
+    def database_url_resolved(self) -> str:
+        """Normaliza URL do PostgreSQL para o driver psycopg3 do SQLAlchemy."""
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+psycopg://", 1)
+        elif url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+        return url
+
     # JWT
     jwt_secret: str = "dev-secret-change-in-production"
     jwt_algorithm: str = "HS256"

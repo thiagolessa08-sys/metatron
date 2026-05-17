@@ -11,22 +11,15 @@ _BLOCKED_SQL = re.compile(
     re.IGNORECASE,
 )
 
-_HEADERS = {
-    "X-API-Key": settings.agent_api_key,
-    "Content-Type": "application/json",
-}
-
-
 class SybaseAgentClient:
-    def __init__(self) -> None:
-        self._base_url = settings.agent_url
-        self._timeout = settings.agent_timeout_seconds
-
     def _client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(
-            base_url=self._base_url,
-            headers=_HEADERS,
-            timeout=self._timeout,
+            base_url=settings.agent_url,
+            headers={
+                "X-API-Key": settings.agent_api_key,
+                "Content-Type": "application/json",
+            },
+            timeout=settings.agent_timeout_seconds,
         )
 
     async def health(self) -> bool:

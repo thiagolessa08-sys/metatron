@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8000"
+const BACKEND = process.env.BACKEND_URL ?? "https://metatron-production.up.railway.app"
 
 async function forward(req: NextRequest, segments: string[]): Promise<NextResponse> {
   const url = `${BACKEND}/health/${segments.join("/")}${req.nextUrl.search}`

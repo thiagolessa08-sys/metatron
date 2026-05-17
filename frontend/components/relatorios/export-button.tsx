@@ -1,5 +1,4 @@
 "use client"
-import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Download } from "lucide-react"
 import { toast } from "sonner"
@@ -30,11 +29,9 @@ export function ExportButton({ endpoint, body, filename }: ExportButtonProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Download className="h-4 w-4" />
-          Exportar
-        </Button>
+      <DropdownMenuTrigger className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground">
+        <Download className="h-4 w-4" />
+        Exportar
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => download("csv")}>CSV</DropdownMenuItem>

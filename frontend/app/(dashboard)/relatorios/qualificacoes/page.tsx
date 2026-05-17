@@ -119,7 +119,9 @@ export default function QualificacoesPage() {
           <ExportButtonWrapper />
         </Suspense>
       </div>
-      <FilterBar fields={["periodo", "campanha", "operador"]} />
+      <Suspense fallback={<Skeleton className="h-12 w-full" />}>
+        <FilterBar fields={["periodo", "campanha", "operador"]} />
+      </Suspense>
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <QualificacoesContent />
       </Suspense>

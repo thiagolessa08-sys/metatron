@@ -144,7 +144,9 @@ export default function AproveitamentoPage() {
           <ExportButtonWrapper />
         </Suspense>
       </div>
-      <FilterBar fields={["campanha"]} />
+      <Suspense fallback={<Skeleton className="h-12 w-full" />}>
+        <FilterBar fields={["campanha"]} />
+      </Suspense>
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <AproveitamentoContent />
       </Suspense>

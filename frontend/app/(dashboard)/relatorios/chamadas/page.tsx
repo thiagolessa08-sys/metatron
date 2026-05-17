@@ -121,7 +121,9 @@ export default function ChamadasPage() {
           <ExportWrapper />
         </Suspense>
       </div>
-      <FilterBar fields={["periodo", "resultado", "operadora"]} />
+      <Suspense fallback={<Skeleton className="h-12 w-full" />}>
+        <FilterBar fields={["periodo", "resultado", "operadora"]} />
+      </Suspense>
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <ChamadasContent />
       </Suspense>

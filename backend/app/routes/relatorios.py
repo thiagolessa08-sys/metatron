@@ -1,0 +1,68 @@
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
+from app.auth.dependencies import get_current_user
+from app.schemas.qualificacoes import QualificacoesQuery, QualificacoesResult
+from app.schemas.aproveitamento import AproveitamentoQuery, AproveitamentoResult
+from app.services.relatorio_qualificacoes import get_qualificacoes
+from app.services.relatorio_aproveitamento import get_aproveitamento
+from app.services.export import to_csv, to_xlsx
+
+router = APIRouter(prefix="/api/relatorios")
+
+
+@router.post("/qualificacoes", response_model=QualificacoesResult)
+async def relatorio_qualificacoes(
+    q: QualificacoesQuery,
+    fmt: str = Query(default="json", alias="format"),
+    _user=Depends(get_current_user),
+):
+    result = await get_qualificacoes(q)
+    if fmt == "csv":
+        headers = ["Qualificação", "Quantidade", "% do Total"]
+        rows = [[i.qualificacao, i.quantidade, i.percentual] for i in result.items]
+        return StreamingResponse(
+            iter([to_csv(rows, headers)]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=qualificacoes.csv"},
+        )
+    if fmt == "xlsx":
+        headers = ["Qualificação", "Quantidade", "% do Total"]
+        rows = [[i.qualificacao, i.quantidade, i.percentual] for i in result.items]
+        return StreamingResponse(
+            iter([to_xlsx(rows, headers, "Qualificações")]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=qualificacoes.xlsx"},
+        )
+    return result
+
+
+@router.post("/aproveitamento", response_model=AproveitamentoResult)
+async def relatorio_aproveitamento(
+    q: AproveitamentoQuery,
+    fmt: str = Query(default="json", alias="format"),
+    _user=Depends(get_current_user),
+):
+    result = await get_aproveitamento(q)
+    if fmt == "csv":
+        headers = ["Campanha", "Total", "Localizados", "Em Contato", "Contatados",
+                   "Discados", "Atendidas Hoje", "Aproveitamento %", "Ag. Públicos", "Ag. Privados"]
+        rows = [[i.campanha, i.total, i.localizados, i.em_contato, i.contatados,
+                 i.discados_total, i.atendidas_hoje, i.aproveitamento,
+                 i.agendamentos_publicos, i.agendamentos_privados] for i in result.items]
+        return StreamingResponse(
+            iter([to_csv(rows, headers)]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=aproveitamento.csv"},
+        )
+    if fmt == "xlsx":
+        headers = ["Campanha", "Total", "Localizados", "Em Contato", "Contatados",
+                   "Discados", "Atendidas Hoje", "Aproveitamento %", "Ag. Públicos", "Ag. Privados"]
+        rows = [[i.campanha, i.total, i.localizados, i.em_contato, i.contatados,
+                 i.discados_total, i.atendidas_hoje, i.aproveitamento,
+                 i.agendamentos_publicos, i.agendamentos_privados] for i in result.items]
+        return StreamingResponse(
+            iter([to_xlsx(rows, headers, "Aproveitamento")]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=aproveitamento.xlsx"},
+        )
+    return result

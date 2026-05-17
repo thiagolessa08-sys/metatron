@@ -34,21 +34,27 @@ async def test_health_returns_false_on_error(agent):
 @pytest.mark.asyncio
 async def test_list_tables_returns_list(agent):
     respx.get(f"{BASE}/tables").mock(
-        return_value=httpx.Response(200, json=["tabela_a", "tabela_b"])
+        return_value=httpx.Response(
+            200, json={"tables": [{"name": "tabela_a", "type": "BASE"}, {"name": "tabela_b", "type": "VIEW"}]}
+        )
     )
     tables = await agent.list_tables()
-    assert tables == ["tabela_a", "tabela_b"]
+    assert len(tables) == 2
+    assert tables[0]["name"] == "tabela_a"
+    assert tables[1]["name"] == "tabela_b"
 
 
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_schema_returns_columns(agent):
-    cols = [{"name": "id", "type": "INTEGER", "nullable": False}]
+    raw_cols = [{"name": "id", "type": "INTEGER", "width": 4, "nullable": False}]
     respx.get(f"{BASE}/schema/usuarios").mock(
-        return_value=httpx.Response(200, json=cols)
+        return_value=httpx.Response(200, json={"table": "usuarios", "columns": raw_cols})
     )
     result = await agent.get_schema("usuarios")
-    assert result == cols
+    assert len(result) == 1
+    assert result[0]["name"] == "id"
+    assert result[0]["type"] == "INTEGER"
 
 
 @respx.mock

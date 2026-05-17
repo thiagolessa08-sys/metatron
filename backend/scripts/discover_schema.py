@@ -42,7 +42,7 @@ async def main():
     ]
 
     for table in tables:
-        print(f"  → {table}")
+        print(f"  -> {table}")
         try:
             cols = await agent.get_schema(table)
             lines.append(f"### `{settings.sybase_schema}.{table}`\n")

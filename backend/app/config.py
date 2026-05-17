@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     agent_timeout_seconds: int = 30
     agent_default_limit: int = 500
     sybase_schema: str = "pref_aruja_sp"
+    agent_verify_ssl: bool = True
 
     # Banco do dashboard
     database_url: str = "sqlite:///./dev.db"

@@ -1,6 +1,5 @@
 """
 Cliente HTTP para o Java Agent (proxy Sybase IQ via Cloudflare Tunnel).
-Implementação completa na Tarefa 0.4.
 """
 import re
 import httpx
@@ -20,6 +19,7 @@ class SybaseAgentClient:
                 "Content-Type": "application/json",
             },
             timeout=settings.agent_timeout_seconds,
+            verify=settings.agent_verify_ssl,
         )
 
     async def health(self) -> bool:
@@ -30,17 +30,38 @@ class SybaseAgentClient:
         except Exception:
             return False
 
-    async def list_tables(self) -> list[str]:
+    async def list_tables(self) -> list[dict]:
+        """Retorna lista de dicts com 'name' e 'type' das tabelas do schema."""
         async with self._client() as c:
             r = await c.get("/tables")
             r.raise_for_status()
-            return r.json()
+            data = r.json()
+            # Agente retorna {"tables": [...]} ou lista direta
+            tables = data.get("tables", data) if isinstance(data, dict) else data
+            return [
+                {"name": t["name"].strip(), "type": t.get("type", "").strip()}
+                for t in tables
+                if isinstance(t, dict)
+            ]
 
     async def get_schema(self, table: str) -> list[dict]:
+        """Retorna lista de colunas com name, type, width, nullable."""
         async with self._client() as c:
             r = await c.get(f"/schema/{table}")
             r.raise_for_status()
-            return r.json()
+            data = r.json()
+            # Agente retorna {"table": "...", "columns": [...]}
+            cols = data.get("columns", data) if isinstance(data, dict) else data
+            return [
+                {
+                    "name": c["name"].strip(),
+                    "type": c.get("type", "").strip(),
+                    "width": c.get("width"),
+                    "nullable": c.get("nullable", True),
+                }
+                for c in cols
+                if isinstance(c, dict)
+            ]
 
     async def query(self, sql: str, limit: int | None = None) -> dict:
         if _BLOCKED_SQL.search(sql):

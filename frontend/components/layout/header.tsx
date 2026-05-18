@@ -3,15 +3,19 @@
 import { Bell, Info, Menu, Search } from "lucide-react"
 import { ProfilePill } from "@/components/layout/profile-pill"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { PeriodFilter } from "@/components/filters/period-filter"
+import { useFilters } from "@/lib/filters-context"
 
 interface HeaderProps {
   onMenuClick?: () => void
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
+  const { pageFilters } = useFilters()
+
   return (
     <div className="flex items-center justify-between gap-[18px] px-1 py-0.5">
-      <div className="flex items-center gap-3.5">
+      <div className="flex shrink-0 items-center gap-3.5">
         <button
           type="button"
           onClick={onMenuClick}
@@ -26,10 +30,15 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3.5">
+      <div className="hidden flex-1 items-center justify-center gap-2 md:flex">
+        <PeriodFilter />
+        {pageFilters}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-3.5">
         <button
           type="button"
-          className="hidden h-10 w-10 place-items-center rounded-full bg-white text-[#444] transition-colors hover:bg-[#f6f6f6] sm:grid"
+          className="hidden h-10 w-10 place-items-center rounded-full bg-white text-[#444] transition-colors hover:bg-[#f6f6f6] lg:grid"
           style={{ boxShadow: "var(--shadow-card)" }}
           aria-label="Buscar"
         >
@@ -47,14 +56,6 @@ export function Header({ onMenuClick }: HeaderProps) {
             style={{ background: "var(--orange)", border: "2px solid #fff" }}
             aria-hidden="true"
           />
-        </button>
-        <button
-          type="button"
-          className="hidden h-10 w-10 place-items-center rounded-full bg-white text-[#444] transition-colors hover:bg-[#f6f6f6] md:grid"
-          style={{ boxShadow: "var(--shadow-card)" }}
-          aria-label="Informações"
-        >
-          <Info className="h-[18px] w-[18px]" strokeWidth={1.8} />
         </button>
         <ThemeToggle />
         <ProfilePill />

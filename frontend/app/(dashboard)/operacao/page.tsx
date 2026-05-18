@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Radio, Users, Phone, Clock, AlertCircle } from "lucide-react"
+import { Radio, Users, Phone, Clock, AlertCircle, RefreshCw } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
@@ -22,6 +22,8 @@ interface Snapshot {
   data_referencia: string | null
   is_today: boolean
 }
+
+const INTERVAL_MS = 30_000
 
 function fmtDur(s: number) {
   if (s < 60) return `${s}s`
@@ -43,49 +45,38 @@ export default function OperacaoPage() {
   const { user } = useAuth()
   const [snap, setSnap] = useState<Snapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [connected, setConnected] = useState(false)
-  const esRef = useRef<EventSource | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [lastFetch, setLastFetch] = useState<Date | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const fetchSnapshot = useCallback(async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const token = localStorage.getItem("access_token")
+      const res = await fetch("/api/operacao/snapshot", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data: Snapshot = await res.json()
+      setSnap(data)
+      setError(null)
+      setLastFetch(new Date())
+    } catch (e) {
+      setError("Falha ao carregar dados da operação.")
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
 
   useEffect(() => {
     if (!user) return
-
-    function connect() {
-      const token = localStorage.getItem("access_token")
-      const url = `/api/operacao/stream?token=${encodeURIComponent(token ?? "")}&interval=30`
-      const es = new EventSource(url)
-      esRef.current = es
-
-      es.onopen = () => {
-        setConnected(true)
-        setError(null)
-      }
-
-      es.onmessage = (ev) => {
-        try {
-          const data = JSON.parse(ev.data)
-          if (data.error) {
-            setError(data.error)
-          } else {
-            setSnap(data as Snapshot)
-            setError(null)
-          }
-        } catch {
-          setError("Falha ao processar dados do servidor.")
-        }
-      }
-
-      es.onerror = () => {
-        setConnected(false)
-        es.close()
-        setTimeout(connect, 10_000)
-      }
-    }
-
-    connect()
+    fetchSnapshot()
+    timerRef.current = setInterval(fetchSnapshot, INTERVAL_MS)
     return () => {
-      esRef.current?.close()
+      if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [user])
+  }, [user, fetchSnapshot])
 
   const isFallback = snap && !snap.is_today
 
@@ -99,18 +90,24 @@ export default function OperacaoPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-full bg-white px-3.5 py-2" style={{ boxShadow: "var(--shadow-card)" }}>
-            <span
-              className={`h-2 w-2 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-red-400"}`}
-            />
-            <span className="text-xs font-semibold text-[var(--ink)]">
-              {connected ? "Ao vivo" : "Reconectando…"}
-            </span>
-          </div>
-          {snap && (
-            <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-xs font-semibold text-[var(--ink)]" style={{ boxShadow: "var(--shadow-card)" }}>
+          <button
+            type="button"
+            onClick={fetchSnapshot}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-xs font-semibold text-[var(--ink)] transition-colors hover:bg-[#f5f5f5] disabled:opacity-60"
+            style={{ boxShadow: "var(--shadow-card)" }}
+            title="Atualizar agora"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            {loading ? "Atualizando…" : "Atualizar"}
+          </button>
+          {lastFetch && (
+            <div
+              className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-xs font-semibold text-[var(--ink)]"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
               <Clock className="h-3 w-3 text-[var(--muted-finexy)]" />
-              {snap.atualizado_em}
+              {lastFetch.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </div>
           )}
         </div>
@@ -165,15 +162,10 @@ export default function OperacaoPage() {
       </div>
 
       {/* Tabela */}
-      <div
-        className="rounded-[22px] bg-white p-5"
-        style={{ boxShadow: "var(--shadow-card)" }}
-      >
+      <div className="rounded-[22px] bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <h2 className="text-[18px] font-bold tracking-[-0.01em]">
-              Desempenho por agente
-            </h2>
+            <h2 className="text-[18px] font-bold tracking-[-0.01em]">Desempenho por agente</h2>
             <p className="mt-0.5 text-xs text-[var(--muted-finexy)]">
               Ordenado por volume de ligações
             </p>
@@ -195,21 +187,11 @@ export default function OperacaoPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--line-2)] bg-[#fafafa]">
-                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                    #
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                    Operador
-                  </th>
-                  <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                    Ligações
-                  </th>
-                  <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                    Duração média
-                  </th>
-                  <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                    Última
-                  </th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">#</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">Operador</th>
+                  <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">Ligações</th>
+                  <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">Duração média</th>
+                  <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">Última</th>
                 </tr>
               </thead>
               <tbody>
@@ -218,17 +200,12 @@ export default function OperacaoPage() {
                     key={ag.operador}
                     className="border-b border-[var(--line-2)] last:border-b-0"
                   >
-                    <td className="px-3 py-2.5 text-sm text-[var(--muted-finexy)]">
-                      {idx + 1}
-                    </td>
+                    <td className="px-3 py-2.5 text-sm text-[var(--muted-finexy)]">{idx + 1}</td>
                     <td className="px-3 py-2.5 text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <span
                           className="grid h-7 w-7 place-items-center rounded-full text-[11px] font-bold"
-                          style={{
-                            background: "var(--orange-soft)",
-                            color: "var(--orange)",
-                          }}
+                          style={{ background: "var(--orange-soft)", color: "var(--orange)" }}
                         >
                           {ag.operador.charAt(0).toUpperCase()}
                         </span>
@@ -256,11 +233,7 @@ export default function OperacaoPage() {
 }
 
 function Kpi({
-  label,
-  value,
-  hint,
-  icon,
-  highlight = false,
+  label, value, hint, icon, highlight = false,
 }: {
   label: string
   value: string | null
@@ -270,9 +243,7 @@ function Kpi({
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-[22px] p-5 ${
-        highlight ? "text-white" : "bg-white text-[var(--ink)]"
-      }`}
+      className={`relative overflow-hidden rounded-[22px] p-5 ${highlight ? "text-white" : "bg-white text-[var(--ink)]"}`}
       style={{
         background: highlight ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" : undefined,
         boxShadow: "var(--shadow-card)",
@@ -282,21 +253,12 @@ function Kpi({
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -bottom-8 -right-8 h-32 w-32 rounded-full"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%)",
-          }}
+          style={{ background: "radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%)" }}
         />
       )}
       <div className="relative flex items-center justify-between text-[13px] font-medium">
-        <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>
-          {label}
-        </span>
-        <span
-          className={`grid h-6 w-6 place-items-center rounded-full ${
-            highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"
-          }`}
-        >
+        <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>{label}</span>
+        <span className={`grid h-6 w-6 place-items-center rounded-full ${highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"}`}>
           {icon}
         </span>
       </div>
@@ -304,11 +266,7 @@ function Kpi({
         {value === null ? <Skeleton className="h-9 w-24" /> : value}
       </p>
       {hint && (
-        <p
-          className={`relative mt-1 text-[11.5px] ${
-            highlight ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"
-          }`}
-        >
+        <p className={`relative mt-1 text-[11.5px] ${highlight ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"}`}>
           {hint}
         </p>
       )}

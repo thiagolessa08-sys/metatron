@@ -71,7 +71,11 @@ async def get_snapshot() -> OperacaoSnapshot:
                 operador = str(row[0]).strip() if row[0] else "—"
                 total = int(row[1]) if row[1] else 0
                 dur_media = int(float(row[2])) if row[2] else 0
-                ultima = str(row[3]).strip() if row[3] else None
+                # hora retorna "0001-01-01 HH:MM:SS.0" — extrair só HH:MM
+                raw_ultima = str(row[3]).strip() if row[3] else None
+                if raw_ultima and " " in raw_ultima:
+                    raw_ultima = raw_ultima.split(" ")[1][:5]
+                ultima = raw_ultima
                 por_agente.append(
                     AgenteAoVivo(
                         operador=operador,

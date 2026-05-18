@@ -21,20 +21,13 @@ DIAS_PT = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo
 
 
 def _parse_hora(raw) -> int | None:
-    """Extrai hora (0-23). Lida com 'HH:MM:SS', 'HH' e 'YYYY-MM-DD HH:MM:SS.s'."""
+    """Converte valor de hora (0-23) retornado pelo DATEPART(hour, hora)."""
     if raw is None:
         return None
-    text = str(raw).strip()
-    if not text:
-        return None
-    # hora retorna como datetime "0001-01-01 HH:MM:SS.s" — pegar só a parte de tempo
-    if " " in text:
-        text = text.split(" ")[1]
     try:
-        if ":" in text:
-            return int(text.split(":")[0])
-        return int(text)
-    except (ValueError, IndexError):
+        h = int(float(str(raw).strip()))
+        return h if 0 <= h <= 23 else None
+    except (ValueError, TypeError):
         return None
 
 
@@ -71,13 +64,14 @@ async def cockpit_heatmap(
         where_extra += f" AND campanha = '{safe_c}'"
 
     # Query única: data + hora → COUNT
+    # DATEPART(hour, hora) agrupa por hora inteira — hora é TIME com precisão de segundos
     sql = (
-        "SELECT data_correta, hora, COUNT(*) AS total "
+        "SELECT data_correta, DATEPART(hour, hora) AS hora_num, COUNT(*) AS total "
         "FROM metatron.TT_ACIONAMENTOS_METATRON "
         f"WHERE data_correta BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra} "
-        "GROUP BY data_correta, hora"
+        "GROUP BY data_correta, DATEPART(hour, hora)"
     )
-    raw = await agent.query(sql, limit=20000)
+    raw = await agent.query(sql, limit=10000)
 
     # Estruturas de agregação
     heatmap_cells: list[HeatmapCell] = []

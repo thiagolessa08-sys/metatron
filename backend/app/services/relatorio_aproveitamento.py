@@ -45,6 +45,9 @@ async def get_aproveitamento(q: AproveitamentoQuery) -> AproveitamentoResult:
     r = await agent.query(sql, limit=500)
     rows = r.get("rows", [])
 
+    def _aproveitamento(localizados: int, total: int) -> float:
+        return round(localizados / total * 100, 2) if total > 0 else 0.0
+
     items = [
         AproveitamentoItem(
             campanha=str(row[0]).strip() if row[0] else "—",
@@ -54,22 +57,24 @@ async def get_aproveitamento(q: AproveitamentoQuery) -> AproveitamentoResult:
             contatados=_to_int(row[4]),
             discados_total=_to_int(row[5]),
             atendidas_hoje=_to_int(row[6]),
-            aproveitamento=round(_to_float(row[7]), 2),
+            aproveitamento=_aproveitamento(_to_int(row[2]), _to_int(row[1])),
             agendamentos_publicos=_to_int(row[8]),
             agendamentos_privados=_to_int(row[9]),
         )
         for row in rows
     ]
 
+    total_geral = sum(i.total for i in items)
+    localizados_geral = sum(i.localizados for i in items)
     totais = AproveitamentoItem(
         campanha="TOTAL",
-        total=sum(i.total for i in items),
-        localizados=sum(i.localizados for i in items),
+        total=total_geral,
+        localizados=localizados_geral,
         em_contato=sum(i.em_contato for i in items),
         contatados=sum(i.contatados for i in items),
         discados_total=sum(i.discados_total for i in items),
         atendidas_hoje=sum(i.atendidas_hoje for i in items),
-        aproveitamento=round(sum(i.aproveitamento for i in items) / len(items), 2) if items else 0.0,
+        aproveitamento=_aproveitamento(localizados_geral, total_geral),
         agendamentos_publicos=sum(i.agendamentos_publicos for i in items),
         agendamentos_privados=sum(i.agendamentos_privados for i in items),
     ) if items else None

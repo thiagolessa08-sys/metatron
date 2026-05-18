@@ -5,7 +5,7 @@ import { ExportButton } from "@/components/relatorios/export-button"
 import { Skeleton } from "@/components/ui/skeleton"
 import api from "@/lib/api"
 import { useFilters } from "@/lib/filters-context"
-import { Phone, Target, Users, Gauge, Award, AlertCircle, Package } from "lucide-react"
+import { Phone, Target, Users, Gauge, Award, AlertCircle, Package, Radio } from "lucide-react"
 
 interface AprItem {
   campanha: string
@@ -46,7 +46,7 @@ export default function AproveitamentoPage() {
       ? items.reduce((s, i) => s + i.aproveitamento, 0) / items.length
       : 0
 
-  // Funil principal
+  // Funil principal: Total → Contatados → Localizados
   const funnelOption = t
     ? {
         tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b>" },
@@ -73,10 +73,9 @@ export default function AproveitamentoPage() {
             labelLine: { show: false },
             itemStyle: { borderColor: "#fff", borderWidth: 2 },
             data: [
-              { value: t.discados_total, name: "Discados", itemStyle: { color: "#111" } },
-              { value: t.localizados, name: "Localizados", itemStyle: { color: "#444" } },
-              { value: t.em_contato, name: "Em contato", itemStyle: { color: "#ff7a3d" } },
-              { value: t.contatados, name: "Contatados", itemStyle: { color: "#ff5a18" } },
+              { value: t.total, name: "Total", itemStyle: { color: "#111" } },
+              { value: t.contatados, name: "Contatados", itemStyle: { color: "#ff7a3d" } },
+              { value: t.localizados, name: "Localizados", itemStyle: { color: "#ff5a18" } },
             ],
           },
         ],
@@ -263,43 +262,43 @@ export default function AproveitamentoPage() {
           <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <Kpi
               highlight
-              label="Aproveitamento médio"
+              label="Aproveitamento"
               value={`${t.aproveitamento.toFixed(1)}%`}
-              hint="Geral do período"
+              hint="Localizados / Total"
               icon={<Gauge className="h-4 w-4" />}
             />
             <Kpi
-              label="Total discado"
-              value={t.discados_total.toLocaleString("pt-BR")}
-              hint="Tentativas realizadas"
-              icon={<Phone className="h-4 w-4" />}
+              label="Total mailing"
+              value={t.total.toLocaleString("pt-BR")}
+              hint="Base total"
+              icon={<Users className="h-4 w-4" />}
             />
             <Kpi
               label="Contatados"
               value={t.contatados.toLocaleString("pt-BR")}
-              hint={`${t.total > 0 ? ((t.contatados / t.total) * 100).toFixed(1) : 0}% do mailing`}
+              hint={`${t.total > 0 ? ((t.contatados / t.total) * 100).toFixed(1) : 0}% do total`}
+              icon={<Phone className="h-4 w-4" />}
+            />
+            <Kpi
+              label="Localizados"
+              value={t.localizados.toLocaleString("pt-BR")}
+              hint={`${t.total > 0 ? ((t.localizados / t.total) * 100).toFixed(1) : 0}% do total`}
               icon={<Target className="h-4 w-4" />}
             />
+          </section>
+
+          <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <Kpi
               label="Estoque a contatar"
               value={estoque.toLocaleString("pt-BR")}
               hint="Restante no mailing"
               icon={<Package className="h-4 w-4" />}
             />
-          </section>
-
-          <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <Kpi
-              label="Localizados"
-              value={t.localizados.toLocaleString("pt-BR")}
-              hint={`${t.total > 0 ? ((t.localizados / t.total) * 100).toFixed(1) : 0}% do mailing`}
-              icon={<Users className="h-4 w-4" />}
-            />
             <Kpi
               label="Em contato"
               value={t.em_contato.toLocaleString("pt-BR")}
               hint="Em tratamento"
-              icon={<Phone className="h-4 w-4" />}
+              icon={<Radio className="h-4 w-4" />}
             />
             <Kpi
               label="Campanha + eficiente"
@@ -329,7 +328,7 @@ export default function AproveitamentoPage() {
                 Funil de aproveitamento
               </h2>
               <p className="mb-3 text-xs text-[var(--muted-finexy)]">
-                Discado → Localizado → Em contato → Contatado
+                Total → Contatados → Localizados
               </p>
               {funnelOption && <ReactECharts option={funnelOption} style={{ height: 340 }} />}
             </div>
@@ -398,10 +397,10 @@ export default function AproveitamentoPage() {
                       Total
                     </th>
                     <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                      Localizados
+                      Contatados
                     </th>
                     <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                      Contatados
+                      Localizados
                     </th>
                     <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
                       Discados
@@ -416,8 +415,8 @@ export default function AproveitamentoPage() {
                     <tr key={i} className="border-b border-[var(--line-2)] last:border-b-0">
                       <td className="px-3 py-2.5 font-medium">{row.campanha}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{row.total.toLocaleString("pt-BR")}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{row.localizados.toLocaleString("pt-BR")}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{row.contatados.toLocaleString("pt-BR")}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums">{row.localizados.toLocaleString("pt-BR")}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{row.discados_total.toLocaleString("pt-BR")}</td>
                       <td className="px-3 py-2.5 text-right">
                         <span
@@ -445,8 +444,8 @@ export default function AproveitamentoPage() {
                   <tr className="bg-[#fafafa] font-bold">
                     <td className="px-3 py-2.5">TOTAL</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{t.total.toLocaleString("pt-BR")}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">{t.localizados.toLocaleString("pt-BR")}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{t.contatados.toLocaleString("pt-BR")}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">{t.localizados.toLocaleString("pt-BR")}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{t.discados_total.toLocaleString("pt-BR")}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{t.aproveitamento.toFixed(1)}%</td>
                   </tr>

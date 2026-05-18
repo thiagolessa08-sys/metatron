@@ -59,12 +59,9 @@ ALLOWED_TABLES = {
     "metatron.TT_RELATORIO_METATRON",
 }
 
-_DEFAULT_TOP = 500
-_MAX_TOP = 5000
-
-# Detecta TOP N já presente
+# O agent já limita via parâmetro "limit" no payload JSON —
+# não injetamos TOP N no SQL para evitar conflito com o driver Sybase IQ.
 _HAS_TOP = re.compile(r"\bTOP\s+\d+\b", re.IGNORECASE)
-# Detecta LIMIT N (sintaxe alternativa)
 _HAS_LIMIT = re.compile(r"\bLIMIT\s+\d+\b", re.IGNORECASE)
 
 
@@ -111,9 +108,5 @@ def validate_and_fix(sql: str) -> str:
             f"Tabela(s) não autorizadas: {', '.join(unknown)}. "
             f"Tabelas permitidas: {', '.join(ALLOWED_TABLES)}."
         )
-
-    # 5. Injetar TOP N se ausente (após SELECT)
-    if not _HAS_TOP.search(sql) and not _HAS_LIMIT.search(sql):
-        sql = re.sub(r"(?i)^(\s*SELECT\s+)", rf"\g<1>TOP {_DEFAULT_TOP} ", sql, count=1)
 
     return sql

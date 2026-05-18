@@ -74,6 +74,14 @@ class SybaseAgentClient:
             for attempt in range(2):
                 r = await c.post("/query", json=payload)
                 if r.status_code < 500 or attempt == 1:
-                    r.raise_for_status()
+                    if not r.is_success:
+                        # Captura o corpo do erro para diagnóstico
+                        try:
+                            detail = r.json()
+                        except Exception:
+                            detail = r.text[:500]
+                        raise RuntimeError(
+                            f"Agent retornou {r.status_code}: {detail}"
+                        )
                     return r.json()
         raise RuntimeError("Falha na requisição ao agent após retry.")

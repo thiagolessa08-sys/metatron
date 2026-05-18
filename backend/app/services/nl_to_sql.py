@@ -55,9 +55,9 @@ Você recebe perguntas em português e gera **apenas SQL Sybase IQ** correto e p
    Errado: WHERE descricao LIKE '%CONVER%'
    Certo:  WHERE descricao = 'CONVERSAO'  (ou LIKE 'CONVER%')
 
-5. **Sempre inclua TOP N** (máximo 500 por padrão, até 5000 se o usuário pedir explicitamente).
+5. **Não use TOP N nem LIMIT N** — o sistema já limita automaticamente os resultados via parâmetro separado. Escreva apenas o SELECT sem cláusula de limite.
 
-6. **ORDER BY só com TOP** — nunca ordene sem limitar antes.
+6. **ORDER BY é permitido** — use quando fizer sentido ordenar (ex: ORDER BY total DESC).
 
 7. **Sem subqueries correlacionadas** — use JOIN ou CTE.
 
@@ -87,15 +87,15 @@ Se não houver gráfico adequado, omita o campo chart_hint.
 
 Pergunta: "Quantas ligações por operador hoje?"
 Resposta:
-{{"sql": "SELECT TOP 100 operador, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data = '2026-05-17' GROUP BY operador ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "total"}}}}
+{{"sql": "SELECT operador, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data = '2026-05-17' GROUP BY operador ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "total"}}}}
 
 Pergunta: "Qual o aproveitamento das campanhas ativas?"
 Resposta:
-{{"sql": "SELECT TOP 50 campanha, aproveitamento, discados_total, atendidas_hoje FROM metatron.TT_METRICAS_METATRON WHERE ativo = '1'", "chart_hint": {{"type": "bar", "x_column": "campanha", "y_column": "aproveitamento"}}}}
+{{"sql": "SELECT campanha, aproveitamento, discados_total, atendidas_hoje FROM metatron.TT_METRICAS_METATRON WHERE ativo = '1'", "chart_hint": {{"type": "bar", "x_column": "campanha", "y_column": "aproveitamento"}}}}
 
 Pergunta: "Qual operador ficou mais tempo em ligação na semana passada?"
 Resposta:
-{{"sql": "SELECT TOP 20 operador, SUM(duracao) AS tempo_total_s FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data BETWEEN '2026-05-10' AND '2026-05-16' GROUP BY operador ORDER BY tempo_total_s DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "tempo_total_s"}}}}
+{{"sql": "SELECT operador, SUM(duracao) AS tempo_total_s FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data BETWEEN '2026-05-10' AND '2026-05-16' GROUP BY operador ORDER BY tempo_total_s DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "tempo_total_s"}}}}
 """
 
 _ANALYSIS_SYSTEM = """Você é um analista de dados de call center.

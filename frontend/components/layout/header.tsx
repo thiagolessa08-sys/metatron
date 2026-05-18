@@ -1,82 +1,64 @@
 "use client"
 
-import { useAuth } from "@/lib/auth-context"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
+import { Bell, Info, Menu, Search } from "lucide-react"
+import { ProfilePill } from "@/components/layout/profile-pill"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
-import { LogOut, Menu, User } from "lucide-react"
-import { Button } from "@/components/ui/button"
-
-const ROLE_LABEL: Record<string, string> = {
-  gestor: "Gestor",
-  consultor: "Consultor",
-  admin: "Admin",
-}
 
 interface HeaderProps {
   onMenuClick?: () => void
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const { user, logout } = useAuth()
-
-  const initials = user?.email
-    ? user.email.slice(0, 2).toUpperCase()
-    : "??"
-
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background px-4">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="md:hidden"
-        onClick={onMenuClick}
-        aria-label="Abrir menu"
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-      <div className="hidden md:block" />
-
-      <div className="flex items-center gap-3">
-        <ThemeToggle />
-        <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-            </Avatar>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium truncate">{user?.email}</p>
-                {user?.role && (
-                  <Badge variant="secondary" className="w-fit text-xs">
-                    {ROLE_LABEL[user.role] ?? user.role}
-                  </Badge>
-                )}
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-muted-foreground">
-              <User className="mr-2 h-4 w-4" />
-              Meu Perfil
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+    <div className="flex items-center justify-between gap-[18px] px-1 py-0.5">
+      <div className="flex items-center gap-3.5">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#444] md:hidden"
+          style={{ boxShadow: "var(--shadow-card)" }}
+          aria-label="Abrir menu"
+        >
+          <Menu className="h-[18px] w-[18px]" />
+        </button>
+        <div className="text-[20px] font-extrabold tracking-[-0.01em] text-[var(--ink)]">
+          Metatron
+        </div>
       </div>
-    </header>
+
+      <div className="flex items-center gap-3.5">
+        <button
+          type="button"
+          className="hidden h-10 w-10 place-items-center rounded-full bg-white text-[#444] transition-colors hover:bg-[#f6f6f6] sm:grid"
+          style={{ boxShadow: "var(--shadow-card)" }}
+          aria-label="Buscar"
+        >
+          <Search className="h-[18px] w-[18px]" strokeWidth={1.8} />
+        </button>
+        <button
+          type="button"
+          className="relative grid h-10 w-10 place-items-center rounded-full bg-white text-[#444] transition-colors hover:bg-[#f6f6f6]"
+          style={{ boxShadow: "var(--shadow-card)" }}
+          aria-label="Notificações"
+        >
+          <Bell className="h-[18px] w-[18px]" strokeWidth={1.8} />
+          <span
+            className="absolute right-2.5 top-2.5 h-[7px] w-[7px] rounded-full"
+            style={{ background: "var(--orange)", border: "2px solid #fff" }}
+            aria-hidden="true"
+          />
+        </button>
+        <button
+          type="button"
+          className="hidden h-10 w-10 place-items-center rounded-full bg-white text-[#444] transition-colors hover:bg-[#f6f6f6] md:grid"
+          style={{ boxShadow: "var(--shadow-card)" }}
+          aria-label="Informações"
+        >
+          <Info className="h-[18px] w-[18px]" strokeWidth={1.8} />
+        </button>
+        <ThemeToggle />
+        <ProfilePill />
+      </div>
+    </div>
   )
 }

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
+import { Greeting } from "@/components/layout/greeting"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -19,19 +20,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (loading || !user) return null
 
   return (
-    <div className="flex min-h-screen">
+    <div
+      className="flex min-h-screen gap-[18px] px-[22px] py-[18px]"
+      style={{ background: "var(--bg)" }}
+    >
       <Sidebar open={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
-      {/* Overlay mobile */}
+
       {mobileSidebarOpen && (
         <div
           className="fixed inset-0 z-20 bg-black/40 md:hidden"
           onClick={() => setMobileSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
-      <div className="flex flex-1 flex-col min-w-0">
+
+      <main className="flex min-w-0 flex-1 flex-col gap-4">
         <Header onMenuClick={() => setMobileSidebarOpen(true)} />
-        <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
-      </div>
+        <Greeting />
+        <div className="flex-1">{children}</div>
+      </main>
     </div>
   )
 }

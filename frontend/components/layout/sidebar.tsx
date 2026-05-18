@@ -2,68 +2,38 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
-import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
-  PieChart,
-  Users,
   Radio,
+  PieChart,
   TrendingUp,
+  Users,
   PhoneCall,
   MessageSquare,
+  LifeBuoy,
+  LogOut,
+  Activity,
 } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
+import { cn } from "@/lib/utils"
 
-const NAV_ITEMS = [
-  {
-    href: "/",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    roles: ["gestor", "consultor", "admin"],
-    group: null,
-  },
-  {
-    href: "/operacao",
-    label: "Operação Agora",
-    icon: Radio,
-    roles: ["gestor", "admin"],
-    group: null,
-  },
-  {
-    href: "/relatorios/qualificacoes",
-    label: "Qualificações",
-    icon: PieChart,
-    roles: ["gestor", "consultor", "admin"],
-    group: "Relatórios",
-  },
-  {
-    href: "/relatorios/aproveitamento",
-    label: "Aproveitamento",
-    icon: TrendingUp,
-    roles: ["gestor", "consultor", "admin"],
-    group: "Relatórios",
-  },
-  {
-    href: "/agentes",
-    label: "Agentes",
-    icon: Users,
-    roles: ["gestor", "admin"],
-    group: "Análise",
-  },
-  {
-    href: "/relatorios/chamadas",
-    label: "Chamadas",
-    icon: PhoneCall,
-    roles: ["gestor", "admin"],
-    group: "Análise",
-  },
-  {
-    href: "/chat",
-    label: "Chat Analítico",
-    icon: MessageSquare,
-    roles: ["gestor", "consultor", "admin"],
-    group: "Análise",
-  },
+type Role = "gestor" | "consultor" | "admin"
+
+interface NavItem {
+  href: string
+  label: string
+  icon: typeof LayoutDashboard
+  roles: Role[]
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["gestor", "consultor", "admin"] },
+  { href: "/operacao", label: "Operação Agora", icon: Radio, roles: ["gestor", "admin"] },
+  { href: "/relatorios/qualificacoes", label: "Qualificações", icon: PieChart, roles: ["gestor", "consultor", "admin"] },
+  { href: "/relatorios/aproveitamento", label: "Aproveitamento", icon: TrendingUp, roles: ["gestor", "consultor", "admin"] },
+  { href: "/agentes", label: "Agentes", icon: Users, roles: ["gestor", "admin"] },
+  { href: "/relatorios/chamadas", label: "Chamadas", icon: PhoneCall, roles: ["gestor", "admin"] },
+  { href: "/chat", label: "Chat Analítico", icon: MessageSquare, roles: ["gestor", "consultor", "admin"] },
 ]
 
 interface SidebarProps {
@@ -71,51 +41,82 @@ interface SidebarProps {
   onClose?: () => void
 }
 
+function isActiveRoute(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/"
+  return pathname === href || pathname.startsWith(href + "/")
+}
+
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
 
-  const visible = NAV_ITEMS.filter(
-    (item) => user && item.roles.includes(user.role)
+  const visible = NAV_ITEMS.filter((item) =>
+    user?.role ? item.roles.includes(user.role as Role) : false
   )
 
   return (
     <>
-      <div className="px-3 mb-6">
-        <span className="font-bold text-lg tracking-tight">Joytec</span>
-        <p className="text-xs text-muted-foreground">Dashboard Analítico</p>
-      </div>
-      {(() => {
-        const groups: string[] = []
-        return visible.map((item) => {
+      <Link
+        href="/"
+        onClick={onClose}
+        className="grid h-11 w-11 place-items-center rounded-[14px] text-white"
+        style={{ background: "var(--orange)", boxShadow: "var(--shadow-logo)" }}
+        title="Metatron"
+        aria-label="Metatron — Dashboard"
+      >
+        <Activity className="h-[22px] w-[22px]" strokeWidth={2.4} />
+      </Link>
+
+      <nav
+        className="mt-1.5 flex flex-col items-center gap-1 rounded-[36px] bg-white px-1.5 py-2.5"
+        style={{ boxShadow: "var(--shadow-card)" }}
+        aria-label="Navegação principal"
+      >
+        {visible.map((item) => {
           const Icon = item.icon
-          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"))
-          const showGroup = item.group && !groups.includes(item.group)
-          if (item.group && showGroup) groups.push(item.group)
+          const active = isActiveRoute(pathname, item.href)
           return (
-            <div key={item.href}>
-              {showGroup && (
-                <p className="px-3 pt-4 pb-1 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
-                  {item.group}
-                </p>
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              title={item.label}
+              aria-label={item.label}
+              className={cn(
+                "grid h-[38px] w-[38px] place-items-center rounded-xl transition-colors",
+                active
+                  ? "bg-[#111] text-white"
+                  : "text-[#b6b6b6] hover:bg-[#f6f6f6] hover:text-[#555]"
               )}
-              <Link
-                href={item.href}
-                onClick={onClose}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </Link>
-            </div>
+            >
+              <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+            </Link>
           )
-        })
-      })()}
+        })}
+      </nav>
+
+      <div className="mt-auto flex flex-col items-center gap-2.5">
+        <button
+          type="button"
+          title="Ajuda"
+          aria-label="Ajuda"
+          className="grid h-[38px] w-[38px] place-items-center rounded-xl text-[#b6b6b6] transition-colors hover:bg-white hover:text-[#555]"
+        >
+          <LifeBuoy className="h-[18px] w-[18px]" strokeWidth={1.8} />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onClose?.()
+            logout()
+          }}
+          title="Sair"
+          aria-label="Sair"
+          className="grid h-[38px] w-[38px] place-items-center rounded-xl text-[#b6b6b6] transition-colors hover:bg-white hover:text-[#555]"
+        >
+          <LogOut className="h-[18px] w-[18px]" strokeWidth={1.8} />
+        </button>
+      </div>
     </>
   )
 }
@@ -124,14 +125,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   return (
     <>
       {/* Desktop */}
-      <aside className="hidden md:flex flex-col w-60 border-r bg-background min-h-screen px-3 py-6 gap-1 shrink-0">
+      <aside className="hidden md:flex w-16 shrink-0 flex-col items-center gap-[18px] py-2 pb-[14px]">
         <SidebarContent />
       </aside>
 
-      {/* Mobile */}
+      {/* Mobile drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-30 flex flex-col w-64 border-r bg-background px-3 py-6 gap-1 transition-transform duration-200 md:hidden",
+          "fixed inset-y-0 left-0 z-30 flex w-16 flex-col items-center gap-[18px] bg-[var(--bg)] py-3 pb-[14px] transition-transform duration-200 md:hidden",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >

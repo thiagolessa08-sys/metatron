@@ -1,46 +1,87 @@
-from datetime import date
+"""
+Operação Agora: snapshot do "dia atual" da operação.
+Fallback inteligente: se hoje não tem dados, usa o último dia com dados na base.
+Útil em PoC e em base com lag D-1.
+"""
+import logging
+from datetime import date, datetime
+
 from app.services.sybase_agent import SybaseAgentClient
 from app.schemas.operacao import AgenteAoVivo, OperacaoSnapshot
 
+logger = logging.getLogger(__name__)
+
 _TABLE = "metatron.TT_ACIONAMENTOS_METATRON"
+
+
+async def _count_for_date(agent: SybaseAgentClient, data: str) -> int:
+    try:
+        r = await agent.query(f"SELECT COUNT(*) FROM {_TABLE} WHERE data = '{data}'")
+        return int((r.get("rows") or [[0]])[0][0] or 0)
+    except Exception as e:
+        logger.error("count_for_date failed: %s", e)
+        return 0
+
+
+async def _latest_date(agent: SybaseAgentClient) -> str | None:
+    try:
+        r = await agent.query(f"SELECT MAX(data) FROM {_TABLE}")
+        rows = r.get("rows") or []
+        if rows and rows[0] and rows[0][0]:
+            return str(rows[0][0]).strip()
+    except Exception as e:
+        logger.error("latest_date failed: %s", e)
+    return None
 
 
 async def get_snapshot() -> OperacaoSnapshot:
     agent = SybaseAgentClient()
     today = date.today().isoformat()
+    is_today = True
 
-    # Total de ligações hoje
-    r_total = await agent.query(
-        f"SELECT COUNT(*) FROM {_TABLE} WHERE data = '{today}'"
-    )
-    total_hoje = int((r_total.get("rows") or [[0]])[0][0] or 0)
+    # Tenta hoje primeiro. Se zero, cai pro último dia com dados.
+    total_hoje = await _count_for_date(agent, today)
+    data_alvo = today
 
-    # Agentes ativos hoje com métricas
-    r_agentes = await agent.query(
-        f"SELECT operador, COUNT(*) AS total, AVG(duracao) AS dur_media, MAX(hora) AS ultima "
-        f"FROM {_TABLE} "
-        f"WHERE data = '{today}' AND operador IS NOT NULL "
-        f"GROUP BY operador ORDER BY total DESC",
-        limit=200,
-    )
+    if total_hoje == 0:
+        latest = await _latest_date(agent)
+        if latest and latest != today:
+            data_alvo = latest
+            total_hoje = await _count_for_date(agent, data_alvo)
+            is_today = False
 
-    por_agente = []
-    for row in r_agentes.get("rows", []):
-        operador = str(row[0]).strip() if row[0] else "—"
-        total = int(row[1]) if row[1] else 0
-        dur_media = int(float(row[2])) if row[2] else 0
-        ultima = str(row[3]).strip() if row[3] else None
-        por_agente.append(AgenteAoVivo(
-            operador=operador,
-            total=total,
-            dur_media_s=dur_media,
-            ultima_chamada=ultima,
-        ))
+    # Agentes ativos no dia alvo com métricas
+    por_agente: list[AgenteAoVivo] = []
+    if total_hoje > 0:
+        try:
+            r_agentes = await agent.query(
+                f"SELECT operador, COUNT(*) AS total, AVG(duracao) AS dur_media, MAX(hora) AS ultima "
+                f"FROM {_TABLE} "
+                f"WHERE data = '{data_alvo}' AND operador IS NOT NULL "
+                f"GROUP BY operador ORDER BY total DESC",
+                limit=200,
+            )
+            for row in r_agentes.get("rows", []):
+                operador = str(row[0]).strip() if row[0] else "—"
+                total = int(row[1]) if row[1] else 0
+                dur_media = int(float(row[2])) if row[2] else 0
+                ultima = str(row[3]).strip() if row[3] else None
+                por_agente.append(
+                    AgenteAoVivo(
+                        operador=operador,
+                        total=total,
+                        dur_media_s=dur_media,
+                        ultima_chamada=ultima,
+                    )
+                )
+        except Exception as e:
+            logger.error("agentes query failed: %s", e)
 
-    from datetime import datetime
     return OperacaoSnapshot(
         total_hoje=total_hoje,
         agentes_ativos=len(por_agente),
         por_agente=por_agente,
         atualizado_em=datetime.now().strftime("%H:%M:%S"),
+        data_referencia=data_alvo,
+        is_today=is_today,
     )

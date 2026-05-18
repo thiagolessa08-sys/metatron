@@ -16,20 +16,33 @@ _SCHEMA_CONTEXT = """
 
 ### metatron.TT_ACIONAMENTOS_METATRON
 Registro de cada ligação/acionamento realizado.
-Colunas: campanha (varchar), cpf (varchar), telefone (varchar), data (varchar, formato 'YYYY-MM-DD'),
-hora (varchar), duracao (integer, em segundos), operador (varchar), descricao (varchar, qualificação da chamada),
-desligou (varchar).
+Colunas:
+- campanha (varchar), cpf (varchar), telefone (varchar)
+- data (varchar, formato 'YYYY-MM-DD') — use comparação direta como string: WHERE data = '2026-05-17'
+- hora (varchar)
+- duracao (INTEGER real) — único campo numérico real; SUM/AVG funcionam sem CAST
+- operador (varchar), descricao (varchar, qualificação da chamada), desligou (varchar)
 
 ### metatron.TT_METRICAS_METATRON
 Métricas agregadas por campanha/fila.
-Colunas: empresa (varchar), fila (varchar), campanha (varchar), total (varchar), localizados (varchar),
-em_contato (varchar), contatados (varchar), descartados (varchar), aproveitamento (varchar),
-hora (varchar), ativo (varchar), discados_total (varchar), atendidas_hoje (varchar).
+ATENÇÃO: todas as colunas numéricas são armazenadas como VARCHAR no banco.
+Para fazer SUM, AVG ou comparações numéricas use CAST(coluna AS NUMERIC).
+Colunas:
+- empresa (varchar), fila (varchar), campanha (varchar)
+- total (varchar→número), localizados (varchar→número), em_contato (varchar→número)
+- contatados (varchar→número), descartados (varchar→número)
+- aproveitamento (varchar→número, percentual 0-100)
+- discados_total (varchar→número), atendidas_hoje (varchar→número)
+- hora (varchar), ativo (varchar, '1'=ativa '0'=inativa)
 
 ### metatron.TT_RELATORIO_METATRON
 Detalhamento de chamadas com tarifação.
-Colunas: data_hora (varchar), numero (varchar), Operadora (varchar), tarifa (varchar),
-resultado (varchar), duracao (varchar), Valor (varchar).
+ATENÇÃO: todas as colunas são VARCHAR, incluindo duracao e Valor.
+Use CAST(duracao AS NUMERIC) ou CAST(Valor AS NUMERIC) se precisar de soma/média.
+Colunas:
+- data_hora (varchar), numero (varchar), Operadora (varchar)
+- tarifa (varchar), resultado (varchar)
+- duracao (varchar→número, em segundos), Valor (varchar→número, custo em R$)
 """
 
 _SYSTEM_PROMPT = f"""Você é um analista de dados especialista em Sybase IQ para uma central de discagem (call center).
@@ -65,13 +78,17 @@ Você recebe perguntas em português e gera **apenas SQL Sybase IQ** correto e p
 
 9. **Joins: tabela com menos linhas à esquerda, sempre com ON explícito**.
 
-10. **Sem conversões implícitas de tipo** — se comparar número, use CAST().
+10. **CAST obrigatório em colunas varchar numéricas** — Em TT_METRICAS_METATRON e TT_RELATORIO_METATRON
+    todas as colunas de valor são VARCHAR. Sybase IQ NÃO faz cast implícito (erro -1001006).
+    Errado: SUM(total), AVG(aproveitamento), SUM(Valor)
+    Certo:  SUM(CAST(total AS NUMERIC)), AVG(CAST(aproveitamento AS NUMERIC)), SUM(CAST(Valor AS NUMERIC))
+    Exceção: em TT_ACIONAMENTOS_METATRON o campo duracao é INTEGER real — não precisa de CAST.
 
 ## Formato de resposta
 
 Responda APENAS com JSON no formato abaixo, sem markdown, sem explicação:
 {{
-  "sql": "SELECT TOP 100 ...",
+  "sql": "SELECT operador, COUNT(*) AS total FROM ...",
   "chart_hint": {{
     "type": "bar",
     "x_column": "operador",

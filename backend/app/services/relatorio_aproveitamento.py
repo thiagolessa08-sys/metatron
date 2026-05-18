@@ -26,11 +26,10 @@ async def get_aproveitamento(q: AproveitamentoQuery) -> AproveitamentoResult:
     agent = SybaseAgentClient()
 
     sql = (
-        "SELECT campanha, SUM(CAST(total AS INTEGER)), SUM(CAST(localizados AS INTEGER)), "
-        "SUM(CAST(em_contato AS INTEGER)), SUM(CAST(contatados AS INTEGER)), "
-        "SUM(CAST(discados_total AS INTEGER)), SUM(CAST(atendidas_hoje AS INTEGER)), "
-        "AVG(CAST(aproveitamento AS DOUBLE)), "
-        "SUM(CAST(agendamentos_publicos AS INTEGER)), SUM(CAST(agendamentos_privados AS INTEGER)) "
+        "SELECT campanha, SUM(total), SUM(localizados), "
+        "SUM(em_contato), SUM(contatados), "
+        "SUM(discados_total), SUM(atendidas_hoje), "
+        "SUM(agendamentos_publicos), SUM(agendamentos_privados) "
         f"FROM {_TABLE}"
     )
     clauses = []
@@ -58,8 +57,8 @@ async def get_aproveitamento(q: AproveitamentoQuery) -> AproveitamentoResult:
             discados_total=_to_int(row[5]),
             atendidas_hoje=_to_int(row[6]),
             aproveitamento=_aproveitamento(_to_int(row[2]), _to_int(row[1])),
-            agendamentos_publicos=_to_int(row[8]),
-            agendamentos_privados=_to_int(row[9]),
+            agendamentos_publicos=_to_int(row[7]),
+            agendamentos_privados=_to_int(row[8]),
         )
         for row in rows
     ]

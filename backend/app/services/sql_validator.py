@@ -59,8 +59,15 @@ ALLOWED_TABLES = {
     "metatron.TT_RELATORIO_METATRON",
 }
 
-# O agent já limita via parâmetro "limit" no payload JSON —
-# não injetamos TOP N no SQL para evitar conflito com o driver Sybase IQ.
+# Tabelas com colunas varchar que podem conter '' — agregações numéricas causam erro -1001006
+_VARCHAR_ONLY_TABLES = {
+    "metatron.TT_METRICAS_METATRON",
+    "metatron.TT_RELATORIO_METATRON",
+}
+
+_AGG_FUNCS = re.compile(r"\b(SUM|AVG|MAX|MIN)\s*\(", re.IGNORECASE)
+
+# O agent já limita via parâmetro "limit" no payload JSON
 _HAS_TOP = re.compile(r"\bTOP\s+\d+\b", re.IGNORECASE)
 _HAS_LIMIT = re.compile(r"\bLIMIT\s+\d+\b", re.IGNORECASE)
 
@@ -99,8 +106,7 @@ def validate_and_fix(sql: str) -> str:
             "SQL viola boas práticas do Sybase IQ:\n" + "\n".join(f"• {v}" for v in violations)
         )
 
-    # 4. Verificar tabelas referenciadas (warn não bloqueia; apenas tabelas não-metatron são suspeitas)
-    # Extrai nomes após FROM/JOIN
+    # 4. Verificar tabelas referenciadas
     referenced = re.findall(r"\b(?:FROM|JOIN)\s+([\w.]+)", sql, re.IGNORECASE)
     unknown = [t for t in referenced if t.lower() not in {a.lower() for a in ALLOWED_TABLES}]
     if unknown:
@@ -108,5 +114,19 @@ def validate_and_fix(sql: str) -> str:
             f"Tabela(s) não autorizadas: {', '.join(unknown)}. "
             f"Tabelas permitidas: {', '.join(ALLOWED_TABLES)}."
         )
+
+    # 5. Bloquear SUM/AVG/MAX/MIN em tabelas varchar-only (causaria erro -1001006)
+    if _AGG_FUNCS.search(sql):
+        varchar_tables_used = [
+            t for t in referenced
+            if t.lower() in {v.lower() for v in _VARCHAR_ONLY_TABLES}
+        ]
+        if varchar_tables_used:
+            raise SqlValidationError(
+                f"SUM/AVG/MAX/MIN não são permitidos em {', '.join(varchar_tables_used)} — "
+                "as colunas numéricas são VARCHAR e podem conter strings vazias (erro -1001006). "
+                "Use apenas SELECT direto ou COUNT(*) nessas tabelas. "
+                "Para agregações numéricas, use TT_ACIONAMENTOS_METATRON."
+            )
 
     return sql

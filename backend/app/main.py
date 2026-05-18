@@ -10,6 +10,7 @@ from app.routes import operacao as operacao_router
 from app.routes import chat as chat_router
 from app.routes import cockpit as cockpit_router
 from app.routes import dashboard as dashboard_router
+from app.routes import sql_exec as sql_exec_router
 
 app = FastAPI(
     title="Dashboard Joytec API",
@@ -35,3 +36,4 @@ app.include_router(operacao_router.router, tags=["operacao"])
 app.include_router(chat_router.router, tags=["chat"])
 app.include_router(cockpit_router.router, tags=["cockpit"])
 app.include_router(dashboard_router.router, tags=["dashboard"])
+app.include_router(sql_exec_router.router, tags=["sql"])

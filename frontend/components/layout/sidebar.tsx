@@ -14,6 +14,7 @@ import {
   LogOut,
   Activity,
   CalendarClock,
+  Terminal,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { cn } from "@/lib/utils"
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/agentes", label: "Agentes", icon: Users, roles: ["gestor", "admin"] },
   { href: "/relatorios/chamadas", label: "Chamadas", icon: PhoneCall, roles: ["gestor", "admin"] },
   { href: "/chat", label: "Chat Analítico", icon: MessageSquare, roles: ["gestor", "consultor", "admin"] },
+  { href: "/sql", label: "SQL Explorer", icon: Terminal, roles: ["admin", "gestor"] },
 ]
 
 interface SidebarProps {

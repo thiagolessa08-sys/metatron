@@ -10,7 +10,7 @@ def _safe(v: str) -> str:
 
 def _to_int(v) -> int:
     try:
-        return int(v) if v is not None else 0
+        return int(float(v)) if v is not None else 0
     except (ValueError, TypeError):
         return 0
 

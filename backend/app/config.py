@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     jwt_access_minutes: int = 15
     jwt_refresh_days: int = 7
 
+    # Anthropic (chat NL→SQL)
+    anthropic_api_key: str = ""
+
     # CORS
     cors_origins: str = "http://localhost:3000"
 

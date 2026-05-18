@@ -6,14 +6,12 @@ import { useAuth } from "@/lib/auth-context"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
-  BarChart3,
   PieChart,
   Users,
-  LogIn,
-  List,
   Radio,
   TrendingUp,
   PhoneCall,
+  MessageSquare,
 } from "lucide-react"
 
 const NAV_ITEMS = [
@@ -46,13 +44,6 @@ const NAV_ITEMS = [
     group: "Relatórios",
   },
   {
-    href: "/relatorios/listas",
-    label: "Listas",
-    icon: List,
-    roles: ["gestor", "admin"],
-    group: "Relatórios",
-  },
-  {
     href: "/agentes",
     label: "Agentes",
     icon: Users,
@@ -67,15 +58,20 @@ const NAV_ITEMS = [
     group: "Análise",
   },
   {
-    href: "/historico-login",
-    label: "Histórico de Login",
-    icon: LogIn,
-    roles: ["gestor", "admin"],
+    href: "/chat",
+    label: "Chat Analítico",
+    icon: MessageSquare,
+    roles: ["gestor", "consultor", "admin"],
     group: "Análise",
   },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  open?: boolean
+  onClose?: () => void
+}
+
+function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
   const { user } = useAuth()
 
@@ -84,7 +80,7 @@ export function Sidebar() {
   )
 
   return (
-    <aside className="hidden md:flex flex-col w-60 border-r bg-background min-h-screen px-3 py-6 gap-1">
+    <>
       <div className="px-3 mb-6">
         <span className="font-bold text-lg tracking-tight">Joytec</span>
         <p className="text-xs text-muted-foreground">Dashboard Analítico</p>
@@ -93,7 +89,7 @@ export function Sidebar() {
         const groups: string[] = []
         return visible.map((item) => {
           const Icon = item.icon
-          const active = pathname === item.href || pathname.startsWith(item.href + "/")
+          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"))
           const showGroup = item.group && !groups.includes(item.group)
           if (item.group && showGroup) groups.push(item.group)
           return (
@@ -105,6 +101,7 @@ export function Sidebar() {
               )}
               <Link
                 href={item.href}
+                onClick={onClose}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   active
@@ -119,6 +116,27 @@ export function Sidebar() {
           )
         })
       })()}
-    </aside>
+    </>
+  )
+}
+
+export function Sidebar({ open, onClose }: SidebarProps) {
+  return (
+    <>
+      {/* Desktop */}
+      <aside className="hidden md:flex flex-col w-60 border-r bg-background min-h-screen px-3 py-6 gap-1 shrink-0">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-30 flex flex-col w-64 border-r bg-background px-3 py-6 gap-1 transition-transform duration-200 md:hidden",
+          open ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <SidebarContent onClose={onClose} />
+      </aside>
+    </>
   )
 }

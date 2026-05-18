@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from app.auth.dependencies import get_current_user
+from app.models.user import User
 from app.schemas.qualificacoes import QualificacoesQuery, QualificacoesResult
 from app.schemas.aproveitamento import AproveitamentoQuery, AproveitamentoResult
 from app.services.relatorio_qualificacoes import get_qualificacoes
@@ -14,8 +15,10 @@ router = APIRouter(prefix="/api/relatorios")
 async def relatorio_qualificacoes(
     q: QualificacoesQuery,
     fmt: str = Query(default="json", alias="format"),
-    _user=Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
+    if user.role == "consultor" and user.agente_id_sybase:
+        q.operador = user.agente_id_sybase
     result = await get_qualificacoes(q)
     if fmt == "csv":
         headers = ["Qualificação", "Quantidade", "% do Total"]
@@ -40,7 +43,7 @@ async def relatorio_qualificacoes(
 async def relatorio_aproveitamento(
     q: AproveitamentoQuery,
     fmt: str = Query(default="json", alias="format"),
-    _user=Depends(get_current_user),
+    _user: User = Depends(get_current_user),
 ):
     result = await get_aproveitamento(q)
     if fmt == "csv":

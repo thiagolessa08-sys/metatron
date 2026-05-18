@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from app.auth.dependencies import get_current_user, require_role
+from app.models.user import User
 from app.schemas.agentes import AgentesQuery, AgentesResult
 from app.schemas.relatorio_chamadas import ChamadasQuery, ChamadasResult
 from app.services.agentes import get_agentes_metricas
@@ -14,8 +15,10 @@ router = APIRouter(prefix="/api/agentes")
 async def agentes_metricas(
     q: AgentesQuery,
     fmt: str = Query(default="json", alias="format"),
-    _user=Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
+    if user.role == "consultor" and user.agente_id_sybase:
+        q.operador = user.agente_id_sybase
     result = await get_agentes_metricas(q)
     if fmt in ("csv", "xlsx"):
         headers = ["Operador", "Ligações", "Duração Total (s)", "Duração Média (s)"]

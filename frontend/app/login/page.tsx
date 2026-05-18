@@ -31,12 +31,8 @@ export default function LoginPage() {
     try {
       await login(data.email, data.password)
       router.push("/")
-    } catch (err: unknown) {
-      const e = err as { response?: { status: number; data?: unknown }; message?: string }
-      const detail = e?.response?.data
-        ? JSON.stringify(e.response.data)
-        : e?.message ?? "erro desconhecido"
-      setError(`Erro ${e?.response?.status ?? "?"}: ${detail}`)
+    } catch {
+      setError("E-mail ou senha inválidos.")
     }
   }
 

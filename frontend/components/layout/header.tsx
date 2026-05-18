@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
-import { LogOut, User } from "lucide-react"
+import { LogOut, Menu, User } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const ROLE_LABEL: Record<string, string> = {
   gestor: "Gestor",
@@ -20,7 +21,11 @@ const ROLE_LABEL: Record<string, string> = {
   admin: "Admin",
 }
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void
+}
+
+export function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth()
 
   const initials = user?.email
@@ -29,7 +34,17 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background px-4">
-      <div />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="md:hidden"
+        onClick={onMenuClick}
+        aria-label="Abrir menu"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+      <div className="hidden md:block" />
+
       <div className="flex items-center gap-3">
         <ThemeToggle />
         <DropdownMenu>

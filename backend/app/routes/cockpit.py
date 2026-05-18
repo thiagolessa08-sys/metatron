@@ -13,7 +13,13 @@ async def heatmap(
     body: CockpitQuery,
     user: User = Depends(get_current_user),
 ) -> CockpitResult:
-    operador_filter: str | None = None
+    operador_forced: str | None = None
     if user.role == "consultor" and user.agente_id_sybase:
-        operador_filter = user.agente_id_sybase
-    return await cockpit_heatmap(body.data_inicio, body.data_fim, operador_filter)
+        operador_forced = user.agente_id_sybase
+    return await cockpit_heatmap(
+        data_inicio=body.data_inicio,
+        data_fim=body.data_fim,
+        campanha=body.campanha,
+        operador=body.operador,
+        operador_forced=operador_forced,
+    )

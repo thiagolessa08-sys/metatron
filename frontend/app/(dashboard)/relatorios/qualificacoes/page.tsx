@@ -18,10 +18,12 @@ interface QualResult {
 }
 
 function QualificacoesContent() {
-  const { period } = useFilters()
+  const { period, campanha, operador } = useFilters()
   const body = {
     data_inicio: period.dataInicio,
     data_fim: period.dataFim,
+    campanha: campanha ?? undefined,
+    operador: operador ?? undefined,
   }
 
   const { data, isLoading, isError } = useQuery<QualResult>({
@@ -141,10 +143,12 @@ function StatCard({
 }
 
 function ExportButtonWrapper() {
-  const { period } = useFilters()
+  const { period, campanha, operador } = useFilters()
   const body = {
     data_inicio: period.dataInicio,
     data_fim: period.dataFim,
+    campanha: campanha ?? undefined,
+    operador: operador ?? undefined,
   }
   return <ExportButton endpoint="/api/relatorios/qualificacoes" body={body} filename="qualificacoes" />
 }

@@ -18,8 +18,9 @@ import { useState } from "react"
 const PRESET_LABEL: Record<PeriodPreset, string> = {
   today: "Hoje",
   last7: "Últimos 7 dias",
-  month: "Este mês",
   last30: "Últimos 30 dias",
+  last90: "Últimos 90 dias",
+  month: "Este mês",
   custom: "Personalizado",
 }
 
@@ -86,8 +87,9 @@ export function PeriodFilter() {
           >
             <DropdownMenuRadioItem value="today">Hoje</DropdownMenuRadioItem>
             <DropdownMenuRadioItem value="last7">Últimos 7 dias</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="month">Este mês</DropdownMenuRadioItem>
             <DropdownMenuRadioItem value="last30">Últimos 30 dias</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="last90">Últimos 90 dias</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="month">Este mês</DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => handlePresetChange("custom")}>

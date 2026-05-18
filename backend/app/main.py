@@ -8,6 +8,7 @@ from app.routes import relatorios as relatorios_router
 from app.routes import agentes as agentes_router
 from app.routes import operacao as operacao_router
 from app.routes import chat as chat_router
+from app.routes import cockpit as cockpit_router
 
 app = FastAPI(
     title="Dashboard Joytec API",
@@ -31,3 +32,4 @@ app.include_router(relatorios_router.router, tags=["relatorios"])
 app.include_router(agentes_router.router, tags=["agentes"])
 app.include_router(operacao_router.router, tags=["operacao"])
 app.include_router(chat_router.router, tags=["chat"])
+app.include_router(cockpit_router.router, tags=["cockpit"])

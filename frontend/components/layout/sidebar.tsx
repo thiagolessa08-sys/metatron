@@ -13,6 +13,7 @@ import {
   LifeBuoy,
   LogOut,
   Activity,
+  CalendarClock,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { cn } from "@/lib/utils"
@@ -29,6 +30,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["gestor", "consultor", "admin"] },
   { href: "/operacao", label: "Operação Agora", icon: Radio, roles: ["gestor", "admin"] },
+  { href: "/cockpit", label: "Cockpit Temporal", icon: CalendarClock, roles: ["gestor", "admin"] },
   { href: "/relatorios/qualificacoes", label: "Qualificações", icon: PieChart, roles: ["gestor", "consultor", "admin"] },
   { href: "/relatorios/aproveitamento", label: "Aproveitamento", icon: TrendingUp, roles: ["gestor", "consultor", "admin"] },
   { href: "/agentes", label: "Agentes", icon: Users, roles: ["gestor", "admin"] },

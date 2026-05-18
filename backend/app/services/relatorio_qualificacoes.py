@@ -28,7 +28,7 @@ async def get_qualificacoes(q: QualificacoesQuery) -> QualificacoesResult:
     sql = (
         f"SELECT descricao, COUNT(*) AS quantidade "
         f"FROM {_TABLE} "
-        f"WHERE data >= '{safe(q.data_inicio)}' AND data <= '{safe(q.data_fim)}'"
+        f"WHERE data_correta >= '{safe(q.data_inicio)}' AND data_correta <= '{safe(q.data_fim)}'"
     )
     if q.campanha:
         sql += f" AND campanha = '{safe(q.campanha)}'"

@@ -15,8 +15,12 @@ _TABLE = "metatron.TT_ACIONAMENTOS_METATRON"
 
 
 async def _count_for_date(agent: SybaseAgentClient, data: str) -> int:
+    """data no formato yyyy-MM-dd."""
     try:
-        r = await agent.query(f"SELECT COUNT(*) FROM {_TABLE} WHERE data = '{data}'")
+        r = await agent.query(
+            f"SELECT COUNT(*) FROM {_TABLE} "
+            f"WHERE data_correta >= '{data}' AND data_correta < '{data} 23:59:59'"
+        )
         return int((r.get("rows") or [[0]])[0][0] or 0)
     except Exception as e:
         logger.error("count_for_date failed: %s", e)
@@ -24,11 +28,13 @@ async def _count_for_date(agent: SybaseAgentClient, data: str) -> int:
 
 
 async def _latest_date(agent: SybaseAgentClient) -> str | None:
+    """Retorna a data mais recente no formato yyyy-MM-dd."""
     try:
-        r = await agent.query(f"SELECT MAX(data) FROM {_TABLE}")
+        r = await agent.query(f"SELECT MAX(data_correta) FROM {_TABLE}")
         rows = r.get("rows") or []
         if rows and rows[0] and rows[0][0]:
-            return str(rows[0][0]).strip()
+            # data_correta retorna "YYYY-MM-DD 00:00:00.0" — extrair só a data
+            return str(rows[0][0]).strip()[:10]
     except Exception as e:
         logger.error("latest_date failed: %s", e)
     return None
@@ -57,7 +63,7 @@ async def get_snapshot() -> OperacaoSnapshot:
             r_agentes = await agent.query(
                 f"SELECT operador, COUNT(*) AS total, AVG(duracao) AS dur_media, MAX(hora) AS ultima "
                 f"FROM {_TABLE} "
-                f"WHERE data = '{data_alvo}' AND operador IS NOT NULL "
+                f"WHERE data_correta >= '{data_alvo}' AND data_correta < '{data_alvo} 23:59:59' AND operador IS NOT NULL "
                 f"GROUP BY operador ORDER BY total DESC",
                 limit=200,
             )

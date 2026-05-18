@@ -40,7 +40,7 @@ async def dashboard_date_range() -> DateRangeResult:
     """Retorna o intervalo de datas disponível em TT_ACIONAMENTOS_METATRON."""
     agent = SybaseAgentClient()
     sql = (
-        "SELECT MIN(data) AS min_data, MAX(data) AS max_data, COUNT(*) AS total "
+        "SELECT MIN(data_correta) AS min_data, MAX(data_correta) AS max_data, COUNT(*) AS total "
         "FROM metatron.TT_ACIONAMENTOS_METATRON"
     )
     raw = await _try_query(agent, sql, limit=1)
@@ -48,9 +48,10 @@ async def dashboard_date_range() -> DateRangeResult:
     if not rows:
         return DateRangeResult(min_data=None, max_data=None, total=0)
     r = rows[0]
+    # data_correta retorna "YYYY-MM-DD 00:00:00.0" — extrair só a data
     return DateRangeResult(
-        min_data=str(r[0]).strip() if r[0] else None,
-        max_data=str(r[1]).strip() if r[1] else None,
+        min_data=str(r[0]).strip()[:10] if r[0] else None,
+        max_data=str(r[1]).strip()[:10] if r[1] else None,
         total=_safe_int(r[2] if len(r) > 2 else 0),
     )
 
@@ -74,7 +75,7 @@ async def dashboard_executive(
         where_extra += f" AND campanha = '{safe_c}'"
 
     period_where = (
-        f"WHERE data BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra}"
+        f"WHERE data_correta BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra}"
     )
 
     # === 1) Total de ligações (query simples) ===
@@ -131,13 +132,13 @@ async def dashboard_executive(
 
     # === 6) Volume diário ===
     sql_volume = (
-        "SELECT data, COUNT(*) AS total "
+        "SELECT data_correta, COUNT(*) AS total "
         f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where} "
-        "GROUP BY data ORDER BY data"
+        "GROUP BY data_correta ORDER BY data_correta"
     )
     volume_raw = await _try_query(agent, sql_volume, limit=400)
     volume_diario = [
-        VolumeDiarioPonto(data=str(r[0]).strip(), total=_safe_int(r[1]))
+        VolumeDiarioPonto(data=str(r[0]).strip()[:10], total=_safe_int(r[1]))
         for r in volume_raw.get("rows", [])
         if len(r) >= 2 and r[0] is not None
     ]

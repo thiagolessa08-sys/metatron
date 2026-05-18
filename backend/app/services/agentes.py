@@ -9,7 +9,7 @@ def _safe(v: str) -> str:
 
 
 def _where(q: AgentesQuery) -> str:
-    parts = [f"data >= '{_safe(q.data_inicio)}' AND data <= '{_safe(q.data_fim)}'"]
+    parts = [f"data_correta >= '{_safe(q.data_inicio)}' AND data_correta <= '{_safe(q.data_fim)}'"]
     if q.campanha:
         parts.append(f"campanha = '{_safe(q.campanha)}'")
     if q.operador:

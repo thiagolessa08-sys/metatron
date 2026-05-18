@@ -21,12 +21,15 @@ DIAS_PT = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo
 
 
 def _parse_hora(raw) -> int | None:
-    """Extrai hora (0-23) de string 'HH:MM:SS' ou 'HH'."""
+    """Extrai hora (0-23). Lida com 'HH:MM:SS', 'HH' e 'YYYY-MM-DD HH:MM:SS.s'."""
     if raw is None:
         return None
     text = str(raw).strip()
     if not text:
         return None
+    # hora retorna como datetime "0001-01-01 HH:MM:SS.s" — pegar só a parte de tempo
+    if " " in text:
+        text = text.split(" ")[1]
     try:
         if ":" in text:
             return int(text.split(":")[0])
@@ -71,8 +74,8 @@ async def cockpit_heatmap(
     sql = (
         "SELECT data, hora, COUNT(*) AS total "
         "FROM metatron.TT_ACIONAMENTOS_METATRON "
-        f"WHERE data BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra} "
-        "GROUP BY data, hora"
+        f"WHERE data_correta BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra} "
+        "GROUP BY data_correta, hora"
     )
     raw = await agent.query(sql, limit=20000)
 
@@ -93,7 +96,8 @@ async def cockpit_heatmap(
     for row in raw.get("rows", []):
         if len(row) < 3:
             continue
-        data_str = str(row[0]).strip()
+        # data_correta retorna "YYYY-MM-DD 00:00:00.0" — usar só os 10 primeiros chars
+        data_str = str(row[0]).strip()[:10]
         hora_int = _parse_hora(row[1])
         try:
             total = int(row[2])

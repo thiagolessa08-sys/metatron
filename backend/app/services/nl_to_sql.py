@@ -19,8 +19,8 @@ Registro de cada ligação/acionamento realizado.
 ÚNICA tabela que suporta agregação numérica.
 Colunas:
 - campanha (varchar), cpf (varchar), telefone (varchar)
-- data (varchar, formato 'YYYY-MM-DD') — use comparação direta como string: WHERE data = '2026-05-17'
-- hora (varchar)
+- data_correta (DATE, formato 'YYYY-MM-DD') — use BETWEEN ou >=/<= com literais ISO: WHERE data_correta BETWEEN '2026-01-01' AND '2026-04-01'
+- hora (TIME) — retorna como datetime; para extrair hora use apenas na SELECT, não em WHERE
 - duracao (INTEGER) — único campo numérico real do sistema; SUM(duracao) e AVG(duracao) funcionam
 - operador (varchar), descricao (varchar, qualificação da chamada), desligou (varchar)
 Agregações permitidas: COUNT(*), SUM(duracao), AVG(duracao), MAX(duracao), MIN(duracao)
@@ -64,9 +64,9 @@ Você recebe perguntas em português e gera **apenas SQL Sybase IQ** correto e p
    Errado: SELECT * FROM metatron.TT_ACIONAMENTOS_METATRON
    Certo:  SELECT TOP 100 operador, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON
 
-3. **Datas: use BETWEEN com literais 'YYYY-MM-DD'** — nunca YEAR(), MONTH() ou DATE() na coluna.
-   Errado: WHERE YEAR(data) = 2026
-   Certo:  WHERE data BETWEEN '2026-01-01' AND '2026-12-31'
+3. **Datas: use BETWEEN com literais 'YYYY-MM-DD' na coluna data_correta** — nunca YEAR(), MONTH() ou DATE().
+   Errado: WHERE YEAR(data_correta) = 2026
+   Certo:  WHERE data_correta BETWEEN '2026-01-01' AND '2026-12-31'
 
 4. **LIKE: nunca wildcard no início** — LIKE '%texto' força full scan.
    Errado: WHERE descricao LIKE '%CONVER%'
@@ -109,7 +109,7 @@ Se não houver gráfico adequado, omita o campo chart_hint.
 
 Pergunta: "Quantas ligações por operador hoje?"
 Resposta:
-{{"sql": "SELECT operador, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data = '2026-05-17' GROUP BY operador ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "total"}}}}
+{{"sql": "SELECT operador, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data_correta = '2026-05-18' GROUP BY operador ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "total"}}}}
 
 Pergunta: "Qual o aproveitamento das campanhas ativas?"
 Resposta:
@@ -117,7 +117,7 @@ Resposta:
 
 Pergunta: "Qual operador ficou mais tempo em ligação na semana passada?"
 Resposta:
-{{"sql": "SELECT operador, SUM(duracao) AS tempo_total_s FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data BETWEEN '2026-05-10' AND '2026-05-16' GROUP BY operador ORDER BY tempo_total_s DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "tempo_total_s"}}}}
+{{"sql": "SELECT operador, SUM(duracao) AS tempo_total_s FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data_correta BETWEEN '2026-05-10' AND '2026-05-16' GROUP BY operador ORDER BY tempo_total_s DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "tempo_total_s"}}}}
 
 Pergunta: "Qual o custo total por operadora?"
 Resposta (CORRETO — só COUNT, nunca SUM em TT_RELATORIO_METATRON):

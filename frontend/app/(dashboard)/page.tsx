@@ -1,19 +1,24 @@
 "use client"
 
-import { useAuth } from "@/lib/auth-context"
 import { useQuery } from "@tanstack/react-query"
-import api from "@/lib/api"
-import { Greeting } from "@/components/layout/greeting"
-import { Skeleton } from "@/components/ui/skeleton"
+import ReactECharts from "echarts-for-react"
 import {
   Activity,
-  ArrowUpRight,
   CheckCircle,
+  Clock,
+  Megaphone,
   Phone,
+  Tag,
   TrendingUp,
+  Trophy,
   Users,
   XCircle,
 } from "lucide-react"
+import api from "@/lib/api"
+import { Greeting } from "@/components/layout/greeting"
+import { useFilters } from "@/lib/filters-context"
+import { Skeleton } from "@/components/ui/skeleton"
+import { format, parseISO } from "date-fns"
 
 interface HealthFull {
   status: string
@@ -21,21 +26,64 @@ interface HealthFull {
   agent: string
   agent_url: string
 }
-interface AgenteAoVivo {
-  operador: string
+interface VolumeDiarioPonto {
+  data: string
   total: number
-  dur_media_s: number
-  ultima_chamada: string | null
 }
-interface Snapshot {
-  total_hoje: number
-  agentes_ativos: number
-  por_agente: AgenteAoVivo[]
-  atualizado_em: string
+interface TopItem {
+  nome: string
+  total: number
+}
+interface DashboardResult {
+  total_ligacoes: number
+  operadores_unicos: number
+  campanhas_unicas: number
+  qualificacoes_unicas: number
+  duracao_media_s: number
+  duracao_total_s: number
+  volume_diario: VolumeDiarioPonto[]
+  top_qualificacoes: TopItem[]
+  top_campanhas: TopItem[]
+  top_operadores: TopItem[]
+  top_campanha: TopItem | null
+  top_operador: TopItem | null
+  top_qualificacao: TopItem | null
+}
+
+const PALETA = [
+  "#ff6a2c",
+  "#111111",
+  "#f4a51b",
+  "#16a34a",
+  "#8a8a8a",
+  "#ff9966",
+  "#3a8df0",
+  "#e23b3b",
+]
+
+function fmtSeg(s: number): string {
+  if (!s) return "—"
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  if (h > 0) return `${h}h ${m}min`
+  if (m > 0) return `${m}m ${sec.toString().padStart(2, "0")}s`
+  return `${sec}s`
 }
 
 export default function HomePage() {
-  const { user } = useAuth()
+  const { period, campanha, operador } = useFilters()
+  const body = {
+    data_inicio: period.dataInicio,
+    data_fim: period.dataFim,
+    campanha: campanha ?? undefined,
+    operador: operador ?? undefined,
+  }
+
+  const { data, isLoading } = useQuery<DashboardResult>({
+    queryKey: ["dashboard-exec", body],
+    queryFn: async () => (await api.post("/api/dashboard/executive", body)).data,
+  })
 
   const { data: health, isLoading: healthLoading } = useQuery<HealthFull>({
     queryKey: ["health-full"],
@@ -43,218 +91,334 @@ export default function HomePage() {
     refetchInterval: 30_000,
   })
 
-  const isGestorOrAdmin = user?.role === "gestor" || user?.role === "admin"
-
-  const { data: snap, isLoading: snapLoading } = useQuery<Snapshot>({
-    queryKey: ["operacao-snapshot"],
-    queryFn: () => api.get("/api/operacao/snapshot").then((r) => r.data),
-    refetchInterval: 60_000,
-    enabled: isGestorOrAdmin,
-  })
-
   const agentOk = health?.agent === "ok"
-  const topAgent = snap?.por_agente?.[0]
+
+  // === ECharts options ===
+  const volumeOption = data
+    ? {
+        tooltip: { trigger: "axis" },
+        grid: { left: 50, right: 20, top: 20, bottom: 50 },
+        xAxis: {
+          type: "category",
+          data: data.volume_diario.map((d) => {
+            try {
+              return format(parseISO(d.data), "d/MM")
+            } catch {
+              return d.data
+            }
+          }),
+          axisLabel: {
+            fontSize: 10,
+            rotate: data.volume_diario.length > 30 ? 45 : 0,
+          },
+        },
+        yAxis: { type: "value", axisLabel: { fontSize: 10 } },
+        series: [
+          {
+            type: "line",
+            smooth: true,
+            data: data.volume_diario.map((d) => d.total),
+            itemStyle: { color: "#ff6a2c" },
+            lineStyle: { width: 2.5 },
+            areaStyle: { color: "rgba(255,106,44,0.12)" },
+            symbol: "circle",
+            symbolSize: 5,
+          },
+        ],
+      }
+    : null
+
+  const qualOption = data
+    ? {
+        tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b> ({d}%)" },
+        legend: {
+          orient: "vertical",
+          right: 0,
+          top: "center",
+          type: "scroll",
+          textStyle: { fontSize: 11 },
+        },
+        series: [
+          {
+            type: "pie",
+            radius: ["50%", "75%"],
+            center: ["32%", "50%"],
+            data: data.top_qualificacoes.slice(0, 6).map((q, i) => ({
+              name: q.nome,
+              value: q.total,
+              itemStyle: { color: PALETA[i % PALETA.length] },
+            })),
+            label: { show: false },
+            labelLine: { show: false },
+          },
+        ],
+      }
+    : null
+
+  const campanhasOption = data
+    ? {
+        tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b>" },
+        grid: { left: 110, right: 20, top: 10, bottom: 25 },
+        xAxis: { type: "value", axisLabel: { fontSize: 10 } },
+        yAxis: {
+          type: "category",
+          data: data.top_campanhas
+            .slice(0, 5)
+            .map((c) => c.nome.length > 18 ? c.nome.slice(0, 17) + "…" : c.nome)
+            .reverse(),
+          axisLabel: { fontSize: 11 },
+        },
+        series: [
+          {
+            type: "bar",
+            data: data.top_campanhas.slice(0, 5).map((c) => c.total).reverse(),
+            itemStyle: { color: "#ff6a2c", borderRadius: [0, 8, 8, 0] },
+            barMaxWidth: 22,
+            label: {
+              show: true,
+              position: "right",
+              fontSize: 10,
+              formatter: (p: { value: number }) => p.value.toLocaleString("pt-BR"),
+            },
+          },
+        ],
+      }
+    : null
+
+  const operadoresOption = data
+    ? {
+        tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b>" },
+        grid: { left: 110, right: 20, top: 10, bottom: 25 },
+        xAxis: { type: "value", axisLabel: { fontSize: 10 } },
+        yAxis: {
+          type: "category",
+          data: data.top_operadores
+            .slice(0, 5)
+            .map((c) => c.nome.length > 18 ? c.nome.slice(0, 17) + "…" : c.nome)
+            .reverse(),
+          axisLabel: { fontSize: 11 },
+        },
+        series: [
+          {
+            type: "bar",
+            data: data.top_operadores.slice(0, 5).map((c) => c.total).reverse(),
+            itemStyle: { color: "#111", borderRadius: [0, 8, 8, 0] },
+            barMaxWidth: 22,
+            label: {
+              show: true,
+              position: "right",
+              fontSize: 10,
+              formatter: (p: { value: number }) => p.value.toLocaleString("pt-BR"),
+            },
+          },
+        ],
+      }
+    : null
 
   return (
     <div className="flex flex-col gap-5 pb-4">
       <Greeting />
 
-      {isGestorOrAdmin && (
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {/* KPI destacado em laranja */}
-          <KpiCard
-            highlight
-            label="Ligações hoje"
-            value={snap?.total_hoje?.toLocaleString("pt-BR") ?? "—"}
-            loading={snapLoading}
-            icon={<Phone className="h-4 w-4" />}
-            footer="Atualizado em tempo real"
-          />
-          <KpiCard
-            label="Agentes ativos"
-            value={snap?.agentes_ativos?.toString() ?? "—"}
-            loading={snapLoading}
-            icon={<Users className="h-4 w-4" />}
-            footer={
-              snap?.agentes_ativos
-                ? `${snap.agentes_ativos} operadores online agora`
-                : "—"
-            }
-          />
-          <KpiCard
-            label="Top agente"
-            value={topAgent?.operador ?? "—"}
-            loading={snapLoading}
-            icon={<TrendingUp className="h-4 w-4" />}
-            footer={
-              topAgent
-                ? `${topAgent.total.toLocaleString("pt-BR")} ligações hoje`
-                : "Sem dados"
-            }
-            valueSize="lg"
-          />
-          <KpiCard
-            label="Duração média"
-            value={
-              topAgent?.dur_media_s
-                ? `${Math.round(topAgent.dur_media_s)}s`
-                : "—"
-            }
-            loading={snapLoading}
-            icon={<Activity className="h-4 w-4" />}
-            footer="Top agente, média por chamada"
-          />
-        </section>
+      {isLoading && (
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-[22px]" />
+          ))}
+        </div>
       )}
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Painel de agentes ao vivo */}
-        {isGestorOrAdmin && (
-          <div
-            className="lg:col-span-2 rounded-[22px] bg-white p-5"
-            style={{ boxShadow: "var(--shadow-card)" }}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-[18px] font-bold tracking-[-0.01em]">
-                  Agentes em atividade
-                </h2>
+      {data && !isLoading && data.total_ligacoes === 0 && (
+        <div className="rounded-[22px] border border-dashed border-[var(--line)] bg-white p-12 text-center">
+          <p className="text-[var(--muted-finexy)]">
+            Nenhuma ligação encontrada nos filtros atuais.
+          </p>
+          <p className="mt-1 text-xs text-[#9a9a9a]">
+            Tente ampliar o período ou limpar campanha/operador.
+          </p>
+        </div>
+      )}
+
+      {data && !isLoading && data.total_ligacoes > 0 && (
+        <>
+          {/* KPIs — linha 1 */}
+          <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <Kpi
+              highlight
+              label="Total de ligações"
+              value={data.total_ligacoes.toLocaleString("pt-BR")}
+              hint="No período selecionado"
+              icon={<Phone className="h-4 w-4" />}
+            />
+            <Kpi
+              label="Operadores"
+              value={data.operadores_unicos.toString()}
+              hint="Únicos no período"
+              icon={<Users className="h-4 w-4" />}
+            />
+            <Kpi
+              label="Campanhas"
+              value={data.campanhas_unicas.toString()}
+              hint="Únicas no período"
+              icon={<Megaphone className="h-4 w-4" />}
+            />
+            <Kpi
+              label="Duração média"
+              value={fmtSeg(data.duracao_media_s)}
+              hint={`Total: ${fmtSeg(data.duracao_total_s)}`}
+              icon={<Clock className="h-4 w-4" />}
+            />
+          </section>
+
+          {/* KPIs — linha 2 (destaques) */}
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Kpi
+              label="Top campanha"
+              value={data.top_campanha?.nome ?? "—"}
+              hint={
+                data.top_campanha
+                  ? `${data.top_campanha.total.toLocaleString("pt-BR")} ligações`
+                  : "Sem dados"
+              }
+              icon={<Trophy className="h-4 w-4" />}
+              valueSize="md"
+            />
+            <Kpi
+              label="Top operador"
+              value={data.top_operador?.nome ?? "—"}
+              hint={
+                data.top_operador
+                  ? `${data.top_operador.total.toLocaleString("pt-BR")} ligações`
+                  : "Sem dados"
+              }
+              icon={<TrendingUp className="h-4 w-4" />}
+              valueSize="md"
+            />
+            <Kpi
+              label="Qualificação principal"
+              value={data.top_qualificacao?.nome ?? "—"}
+              hint={
+                data.top_qualificacao
+                  ? `${data.top_qualificacao.total.toLocaleString("pt-BR")} ocorrências`
+                  : "Sem dados"
+              }
+              icon={<Tag className="h-4 w-4" />}
+              valueSize="md"
+            />
+          </section>
+
+          {/* Volume diário + Qualificações */}
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div
+              className="lg:col-span-2 rounded-[22px] bg-white p-5"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="mb-3">
+                <h2 className="text-[18px] font-bold tracking-[-0.01em]">Volume diário</h2>
                 <p className="mt-0.5 text-xs text-[var(--muted-finexy)]">
-                  Top 8 por volume de ligações hoje
+                  Evolução de ligações no período
                 </p>
               </div>
-              <a
-                href="/agentes"
-                className="inline-flex items-center gap-1 rounded-full bg-[var(--chip)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition-colors hover:bg-[#ececec]"
-              >
-                Ver todos
-                <ArrowUpRight className="h-3 w-3" />
-              </a>
+              {volumeOption && <ReactECharts option={volumeOption} style={{ height: 260 }} />}
             </div>
 
-            {snapLoading ? (
-              <div className="space-y-3">
-                {[0, 1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
+            <div
+              className="rounded-[22px] bg-white p-5"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="mb-3">
+                <h2 className="text-[18px] font-bold tracking-[-0.01em]">Qualificações</h2>
+                <p className="mt-0.5 text-xs text-[var(--muted-finexy)]">Top 6 no período</p>
               </div>
-            ) : snap && snap.por_agente.length > 0 ? (
-              <div className="overflow-hidden rounded-xl border border-[var(--line-2)]">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-[var(--line-2)] bg-[#fafafa]">
-                      <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                        Operador
-                      </th>
-                      <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                        Ligações
-                      </th>
-                      <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                        Dur. média
-                      </th>
-                      <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                        Última
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {snap.por_agente.slice(0, 8).map((a) => (
-                      <tr
-                        key={a.operador}
-                        className="border-b border-[var(--line-2)] last:border-b-0"
-                      >
-                        <td className="px-3 py-2.5 text-sm font-medium">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="grid h-7 w-7 place-items-center rounded-full text-[11px] font-bold"
-                              style={{
-                                background: "var(--orange-soft)",
-                                color: "var(--orange)",
-                              }}
-                            >
-                              {a.operador.charAt(0).toUpperCase()}
-                            </span>
-                            {a.operador}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-sm tabular-nums">
-                          {a.total.toLocaleString("pt-BR")}
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-sm tabular-nums text-[var(--muted-finexy)]">
-                          {Math.round(a.dur_media_s)}s
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-xs text-[var(--muted-finexy)]">
-                          {a.ultima_chamada
-                            ? new Date(a.ultima_chamada).toLocaleTimeString("pt-BR", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-dashed border-[var(--line)] p-8 text-center text-sm text-[var(--muted-finexy)]">
-                Nenhum agente ativo no momento.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Status de infraestrutura */}
-        <div
-          className={`rounded-[22px] bg-white p-5 ${isGestorOrAdmin ? "" : "lg:col-span-3"}`}
-          style={{ boxShadow: "var(--shadow-card)" }}
-        >
-          <h2 className="mb-4 text-[18px] font-bold tracking-[-0.01em]">
-            Infraestrutura
-          </h2>
-          <div className="flex flex-col gap-3">
-            <StatusRow
-              label="API Backend"
-              loading={healthLoading}
-              ok={health?.status === "ok"}
-              detail={health?.status === "ok" ? "Online" : "Indisponível"}
-            />
-            <StatusRow
-              label="Sybase IQ Agent"
-              loading={healthLoading}
-              ok={agentOk}
-              detail={agentOk ? "Conectado" : "Desconectado"}
-              subDetail={health?.agent_url}
-            />
-          </div>
-
-          {!agentOk && !healthLoading && (
-            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-              ⚠️ Java Agent inacessível. Verifique se o Cloudflare Tunnel está ativo.
+              {qualOption && data.top_qualificacoes.length > 0 ? (
+                <ReactECharts option={qualOption} style={{ height: 260 }} />
+              ) : (
+                <div className="grid h-[260px] place-items-center text-xs text-[var(--muted-finexy)]">
+                  Sem dados
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </section>
+          </section>
+
+          {/* Top campanhas + Top operadores + Infra */}
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div
+              className="rounded-[22px] bg-white p-5"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <h2 className="mb-3 text-[18px] font-bold tracking-[-0.01em]">
+                Top 5 campanhas
+              </h2>
+              {campanhasOption && data.top_campanhas.length > 0 ? (
+                <ReactECharts option={campanhasOption} style={{ height: 240 }} />
+              ) : (
+                <div className="grid h-[240px] place-items-center text-xs text-[var(--muted-finexy)]">
+                  Sem dados
+                </div>
+              )}
+            </div>
+
+            <div
+              className="rounded-[22px] bg-white p-5"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <h2 className="mb-3 text-[18px] font-bold tracking-[-0.01em]">
+                Top 5 operadores
+              </h2>
+              {operadoresOption && data.top_operadores.length > 0 ? (
+                <ReactECharts option={operadoresOption} style={{ height: 240 }} />
+              ) : (
+                <div className="grid h-[240px] place-items-center text-xs text-[var(--muted-finexy)]">
+                  Sem dados
+                </div>
+              )}
+            </div>
+
+            <div
+              className="rounded-[22px] bg-white p-5"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <h2 className="mb-3 text-[18px] font-bold tracking-[-0.01em]">Infraestrutura</h2>
+              <div className="flex flex-col gap-2.5">
+                <StatusRow
+                  label="API Backend"
+                  loading={healthLoading}
+                  ok={health?.status === "ok"}
+                  detail={health?.status === "ok" ? "Online" : "Indisponível"}
+                />
+                <StatusRow
+                  label="Sybase IQ Agent"
+                  loading={healthLoading}
+                  ok={agentOk}
+                  detail={agentOk ? "Conectado" : "Desconectado"}
+                />
+              </div>
+              {!agentOk && !healthLoading && (
+                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                  ⚠️ Java Agent inacessível.
+                </div>
+              )}
+            </div>
+          </section>
+        </>
+      )}
     </div>
   )
 }
 
-function KpiCard({
+function Kpi({
   label,
   value,
-  loading,
+  hint,
   icon,
-  footer,
   highlight = false,
   valueSize = "default",
 }: {
   label: string
   value: string
-  loading?: boolean
+  hint?: string
   icon?: React.ReactNode
-  footer?: string
   highlight?: boolean
-  valueSize?: "default" | "lg"
+  valueSize?: "default" | "md"
 }) {
   return (
     <div
@@ -262,54 +426,44 @@ function KpiCard({
         highlight ? "text-white" : "bg-white text-[var(--ink)]"
       }`}
       style={{
-        background: highlight
-          ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)"
-          : undefined,
+        background: highlight ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" : undefined,
         boxShadow: "var(--shadow-card)",
       }}
     >
       {highlight && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-8 -right-8 h-36 w-36 rounded-full"
+          className="pointer-events-none absolute -bottom-8 -right-8 h-32 w-32 rounded-full"
           style={{
-            background:
-              "radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%)",
+            background: "radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%)",
           }}
         />
       )}
-
       <div className="relative flex items-center justify-between text-[13px] font-medium">
-        <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>
-          {label}
-        </span>
+        <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>{label}</span>
         <span
           className={`grid h-6 w-6 place-items-center rounded-full ${
-            highlight ? "bg-white/20 text-white" : "bg-[#f3f3f3] text-[#bdbdbd]"
+            highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"
           }`}
         >
           {icon}
         </span>
       </div>
-      <div
-        className={`relative mt-3.5 mb-1.5 font-bold tracking-[-0.02em] ${
-          valueSize === "lg" ? "text-[22px] truncate" : "text-[30px]"
+      <p
+        className={`relative mt-3 truncate font-bold tracking-[-0.02em] ${
+          valueSize === "md" ? "text-[20px]" : "text-[28px]"
         }`}
       >
-        {loading ? (
-          <Skeleton className={`h-9 ${valueSize === "lg" ? "w-32" : "w-24"} ${highlight ? "bg-white/30" : ""}`} />
-        ) : (
-          value
-        )}
-      </div>
-      {footer && (
-        <div
-          className={`relative text-[11.5px] ${
+        {value}
+      </p>
+      {hint && (
+        <p
+          className={`relative mt-1 text-[11.5px] ${
             highlight ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"
           }`}
         >
-          {footer}
-        </div>
+          {hint}
+        </p>
       )}
     </div>
   )
@@ -320,38 +474,29 @@ function StatusRow({
   loading,
   ok,
   detail,
-  subDetail,
 }: {
   label: string
   loading?: boolean
   ok: boolean
   detail: string
-  subDetail?: string
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-[var(--line-2)] px-3 py-2.5">
-      <div className="flex min-w-0 items-center gap-2.5">
+    <div className="flex items-center justify-between rounded-xl border border-[var(--line-2)] px-3 py-2">
+      <div className="flex items-center gap-2">
         {loading ? (
           <Skeleton className="h-4 w-4 rounded-full" />
         ) : ok ? (
-          <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
+          <CheckCircle className="h-4 w-4 text-green-600" />
         ) : (
-          <XCircle className="h-4 w-4 shrink-0 text-red-500" />
+          <XCircle className="h-4 w-4 text-red-500" />
         )}
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">{label}</p>
-          {subDetail && (
-            <p className="truncate text-[11px] text-[var(--muted-finexy)]">
-              {subDetail}
-            </p>
-          )}
-        </div>
+        <span className="text-sm font-semibold">{label}</span>
       </div>
       {loading ? (
         <Skeleton className="h-5 w-16" />
       ) : (
         <span
-          className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
             ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
           }`}
         >

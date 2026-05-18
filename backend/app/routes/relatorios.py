@@ -2,10 +2,19 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from app.auth.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.qualificacoes import QualificacoesQuery, QualificacoesResult
+from app.schemas.qualificacoes import (
+    QualificacoesQuery,
+    QualificacoesResult,
+    TendenciaResult,
+    HeatmapResult,
+)
 from app.schemas.aproveitamento import AproveitamentoQuery, AproveitamentoResult
 from app.services.relatorio_qualificacoes import get_qualificacoes
 from app.services.relatorio_aproveitamento import get_aproveitamento
+from app.services.qualificacoes_extras import (
+    tendencia_qualificacoes,
+    heatmap_operador_qualificacao,
+)
 from app.services.export import to_csv, to_xlsx
 
 router = APIRouter(prefix="/api/relatorios")
@@ -37,6 +46,30 @@ async def relatorio_qualificacoes(
             headers={"Content-Disposition": "attachment; filename=qualificacoes.xlsx"},
         )
     return result
+
+
+@router.post("/qualificacoes/tendencia", response_model=TendenciaResult)
+async def relatorio_qualificacoes_tendencia(
+    q: QualificacoesQuery,
+    user: User = Depends(get_current_user),
+):
+    operador_forced = None
+    if user.role == "consultor" and user.agente_id_sybase:
+        operador_forced = user.agente_id_sybase
+    return await tendencia_qualificacoes(q, operador_forced=operador_forced, top_n=5)
+
+
+@router.post("/qualificacoes/heatmap", response_model=HeatmapResult)
+async def relatorio_qualificacoes_heatmap(
+    q: QualificacoesQuery,
+    user: User = Depends(get_current_user),
+):
+    operador_forced = None
+    if user.role == "consultor" and user.agente_id_sybase:
+        operador_forced = user.agente_id_sybase
+    return await heatmap_operador_qualificacao(
+        q, operador_forced=operador_forced, top_op=10, top_q=10
+    )
 
 
 @router.post("/aproveitamento", response_model=AproveitamentoResult)

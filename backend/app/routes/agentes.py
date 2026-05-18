@@ -3,9 +3,10 @@ from fastapi.responses import StreamingResponse
 from app.auth.dependencies import get_current_user, require_role
 from app.models.user import User
 from app.schemas.agentes import AgentesQuery, AgentesResult
-from app.schemas.relatorio_chamadas import ChamadasQuery, ChamadasResult
+from app.schemas.relatorio_chamadas import ChamadasQuery, ChamadasResult, ChamadasResumo
 from app.services.agentes import get_agentes_metricas
 from app.services.relatorio_chamadas import get_chamadas
+from app.services.chamadas_resumo import chamadas_resumo
 from app.services.export import to_csv, to_xlsx
 
 router = APIRouter(prefix="/api/agentes")
@@ -60,3 +61,11 @@ async def relatorio_chamadas(
             headers={"Content-Disposition": "attachment; filename=chamadas.xlsx"},
         )
     return result
+
+
+@router.post("/chamadas/resumo", response_model=ChamadasResumo)
+async def relatorio_chamadas_resumo(
+    q: ChamadasQuery,
+    _user: User = Depends(require_role("gestor", "admin")),
+):
+    return await chamadas_resumo(q)

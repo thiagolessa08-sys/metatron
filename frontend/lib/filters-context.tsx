@@ -8,7 +8,14 @@ import {
   useCallback,
   type ReactNode,
 } from "react"
-import { format, subDays } from "date-fns"
+import { format, subDays, parseISO } from "date-fns"
+
+// PoC: data de referência fixa (último dia com dados na base de teste).
+// Em produção (D-1), trocar por: new Date()
+const REFERENCE_DATE_ISO = "2026-04-01"
+function referenceDate(): Date {
+  return parseISO(REFERENCE_DATE_ISO)
+}
 
 export type PeriodPreset = "today" | "last7" | "last30" | "last90" | "month" | "custom"
 
@@ -38,43 +45,43 @@ const STORAGE_KEY_CAMPANHA = "metatron:filters:campanha"
 const STORAGE_KEY_OPERADOR = "metatron:filters:operador"
 
 function today(): string {
-  return format(new Date(), "yyyy-MM-dd")
+  return format(referenceDate(), "yyyy-MM-dd")
 }
 
-// Default: últimos 90 dias para garantir cobertura em base de teste/PoC
+// Default: últimos 90 dias a partir da data de referência
 function defaultPeriod(): PeriodRange {
   return {
     preset: "last90",
-    dataInicio: format(subDays(new Date(), 89), "yyyy-MM-dd"),
+    dataInicio: format(subDays(referenceDate(), 89), "yyyy-MM-dd"),
     dataFim: today(),
   }
 }
 
 export function computePresetRange(preset: PeriodPreset): PeriodRange {
-  const now = new Date()
+  const ref = referenceDate()
   switch (preset) {
     case "today":
       return { preset, dataInicio: today(), dataFim: today() }
     case "last7":
       return {
         preset,
-        dataInicio: format(subDays(now, 6), "yyyy-MM-dd"),
+        dataInicio: format(subDays(ref, 6), "yyyy-MM-dd"),
         dataFim: today(),
       }
     case "last30":
       return {
         preset,
-        dataInicio: format(subDays(now, 29), "yyyy-MM-dd"),
+        dataInicio: format(subDays(ref, 29), "yyyy-MM-dd"),
         dataFim: today(),
       }
     case "last90":
       return {
         preset,
-        dataInicio: format(subDays(now, 89), "yyyy-MM-dd"),
+        dataInicio: format(subDays(ref, 89), "yyyy-MM-dd"),
         dataFim: today(),
       }
     case "month": {
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const monthStart = new Date(ref.getFullYear(), ref.getMonth(), 1)
       return {
         preset,
         dataInicio: format(monthStart, "yyyy-MM-dd"),

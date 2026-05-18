@@ -72,7 +72,7 @@ async def cockpit_heatmap(
 
     # Query única: data + hora → COUNT
     sql = (
-        "SELECT data, hora, COUNT(*) AS total "
+        "SELECT data_correta, hora, COUNT(*) AS total "
         "FROM metatron.TT_ACIONAMENTOS_METATRON "
         f"WHERE data_correta BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra} "
         "GROUP BY data_correta, hora"

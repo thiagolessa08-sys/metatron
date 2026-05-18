@@ -6,7 +6,6 @@ Queries separadas para evitar problemas com múltiplos COUNT(DISTINCT) no Sybase
 import logging
 
 from app.services.sybase_agent import SybaseAgentClient
-from app.utils.date_utils import to_sybase_date, from_sybase_date
 from app.schemas.dashboard import (
     DashboardResult,
     DateRangeResult,
@@ -38,42 +37,21 @@ async def _try_query(agent: SybaseAgentClient, sql: str, limit: int = 100) -> di
 
 
 async def dashboard_date_range() -> DateRangeResult:
-    """
-    Retorna o intervalo de datas disponível em TT_ACIONAMENTOS_METATRON.
-    MIN/MAX sobre VARCHAR dd/MM/yyyy são ordem alfabética — ordena em Python.
-    """
-    from datetime import datetime as _dt
+    """Retorna o intervalo de datas disponível em TT_ACIONAMENTOS_METATRON."""
     agent = SybaseAgentClient()
-
-    # Total
-    total_raw = await _try_query(agent, "SELECT COUNT(*) FROM metatron.TT_ACIONAMENTOS_METATRON", limit=1)
-    total = _safe_int((total_raw.get("rows") or [[0]])[0][0])
-
-    # Datas distintas para calcular min/max cronológico correto
-    dates_raw = await _try_query(
-        agent,
-        "SELECT DISTINCT data FROM metatron.TT_ACIONAMENTOS_METATRON",
-        limit=2000,
+    sql = (
+        "SELECT MIN(data) AS min_data, MAX(data) AS max_data, COUNT(*) AS total "
+        "FROM metatron.TT_ACIONAMENTOS_METATRON"
     )
-    parsed: list[tuple[_dt, str]] = []
-    for row in dates_raw.get("rows") or []:
-        if not (row and row[0]):
-            continue
-        raw = str(row[0]).strip()
-        try:
-            parsed.append((_dt.strptime(raw, "%d/%m/%Y"), raw))
-        except ValueError:
-            pass
-
-    if not parsed:
-        return DateRangeResult(min_data=None, max_data=None, total=total)
-
-    min_db = min(parsed, key=lambda x: x[0])[1]
-    max_db = max(parsed, key=lambda x: x[0])[1]
+    raw = await _try_query(agent, sql, limit=1)
+    rows = raw.get("rows") or []
+    if not rows:
+        return DateRangeResult(min_data=None, max_data=None, total=0)
+    r = rows[0]
     return DateRangeResult(
-        min_data=from_sybase_date(min_db),
-        max_data=from_sybase_date(max_db),
-        total=total,
+        min_data=str(r[0]).strip() if r[0] else None,
+        max_data=str(r[1]).strip() if r[1] else None,
+        total=_safe_int(r[2] if len(r) > 2 else 0),
     )
 
 
@@ -96,7 +74,7 @@ async def dashboard_executive(
         where_extra += f" AND campanha = '{safe_c}'"
 
     period_where = (
-        f"WHERE data BETWEEN '{to_sybase_date(data_inicio)}' AND '{to_sybase_date(data_fim)}'{where_extra}"
+        f"WHERE data BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra}"
     )
 
     # === 1) Total de ligações (query simples) ===
@@ -159,7 +137,7 @@ async def dashboard_executive(
     )
     volume_raw = await _try_query(agent, sql_volume, limit=400)
     volume_diario = [
-        VolumeDiarioPonto(data=from_sybase_date(str(r[0]).strip()), total=_safe_int(r[1]))
+        VolumeDiarioPonto(data=str(r[0]).strip(), total=_safe_int(r[1]))
         for r in volume_raw.get("rows", [])
         if len(r) >= 2 and r[0] is not None
     ]

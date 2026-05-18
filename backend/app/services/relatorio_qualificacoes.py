@@ -1,5 +1,4 @@
 from app.services.sybase_agent import SybaseAgentClient
-from app.utils.date_utils import to_sybase_date
 from app.schemas.qualificacoes import QualificacoesQuery, QualificacaoItem, QualificacoesResult
 
 _TABLE = "metatron.TT_ACIONAMENTOS_METATRON"
@@ -29,7 +28,7 @@ async def get_qualificacoes(q: QualificacoesQuery) -> QualificacoesResult:
     sql = (
         f"SELECT descricao, COUNT(*) AS quantidade "
         f"FROM {_TABLE} "
-        f"WHERE data >= '{to_sybase_date(safe(q.data_inicio))}' AND data <= '{to_sybase_date(safe(q.data_fim))}'"
+        f"WHERE data >= '{safe(q.data_inicio)}' AND data <= '{safe(q.data_fim)}'"
     )
     if q.campanha:
         sql += f" AND campanha = '{safe(q.campanha)}'"

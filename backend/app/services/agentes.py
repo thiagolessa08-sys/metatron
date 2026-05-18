@@ -1,5 +1,4 @@
 from app.services.sybase_agent import SybaseAgentClient
-from app.utils.date_utils import to_sybase_date
 from app.schemas.agentes import AgentesQuery, AgenteMetrica, AgentesResult
 
 _TABLE = "metatron.TT_ACIONAMENTOS_METATRON"
@@ -10,7 +9,7 @@ def _safe(v: str) -> str:
 
 
 def _where(q: AgentesQuery) -> str:
-    parts = [f"data >= '{to_sybase_date(_safe(q.data_inicio))}' AND data <= '{to_sybase_date(_safe(q.data_fim))}'"]
+    parts = [f"data >= '{_safe(q.data_inicio)}' AND data <= '{_safe(q.data_fim)}'"]
     if q.campanha:
         parts.append(f"campanha = '{_safe(q.campanha)}'")
     if q.operador:

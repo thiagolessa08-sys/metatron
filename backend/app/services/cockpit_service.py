@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 from app.services.sybase_agent import SybaseAgentClient
-from app.utils.date_utils import to_sybase_date, from_sybase_date, parse_sybase_date
 from app.schemas.cockpit import (
     CockpitResult,
     HeatmapCell,
@@ -72,7 +71,7 @@ async def cockpit_heatmap(
     sql = (
         "SELECT data, hora, COUNT(*) AS total "
         "FROM metatron.TT_ACIONAMENTOS_METATRON "
-        f"WHERE data BETWEEN '{to_sybase_date(data_inicio)}' AND '{to_sybase_date(data_fim)}'{where_extra} "
+        f"WHERE data BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra} "
         "GROUP BY data, hora"
     )
     raw = await agent.query(sql, limit=20000)
@@ -102,15 +101,14 @@ async def cockpit_heatmap(
             continue
         if hora_int is None:
             continue
-        # DB retorna dd/MM/yyyy — parsear e converter para ISO como chave interna
-        dt = parse_sybase_date(data_str)
-        if dt is None:
+        try:
+            dt = datetime.strptime(data_str, "%Y-%m-%d")
+        except ValueError:
             continue
-        iso_str = dt.strftime("%Y-%m-%d")
 
         dia_semana = dt.weekday()
         heatmap_agg[(dia_semana, hora_int)] += total
-        volume_por_data[iso_str] += total
+        volume_por_data[data_str] += total
         por_dia_semana_agg[dia_semana] += total
         por_turno_agg[_turno_label(hora_int)] += total
         horas_agg[hora_int] += total
@@ -118,10 +116,10 @@ async def cockpit_heatmap(
 
         if dia_semana < 5:
             dia_util_total += total
-            dias_uteis_set.add(iso_str)
+            dias_uteis_set.add(data_str)
         else:
             fds_total += total
-            dias_fds_set.add(iso_str)
+            dias_fds_set.add(data_str)
 
         if 8 <= hora_int < 18:
             horario_comercial_total += total

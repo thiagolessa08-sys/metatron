@@ -1,6 +1,12 @@
 from pydantic import BaseModel, Field
 
 
+class DateRangeResult(BaseModel):
+    min_data: str | None
+    max_data: str | None
+    total: int
+
+
 class DashboardQuery(BaseModel):
     data_inicio: str = Field(..., description="yyyy-MM-dd")
     data_fim: str = Field(..., description="yyyy-MM-dd")

@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query"
 import ReactECharts from "echarts-for-react"
 import {
-  Activity,
   CheckCircle,
   Clock,
   Megaphone,
@@ -13,18 +12,25 @@ import {
   Trophy,
   Users,
   XCircle,
+  Calendar,
 } from "lucide-react"
 import api from "@/lib/api"
 import { Greeting } from "@/components/layout/greeting"
 import { useFilters } from "@/lib/filters-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { format, parseISO } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 interface HealthFull {
   status: string
   service: string
   agent: string
   agent_url: string
+}
+interface DateRangeResult {
+  min_data: string | null
+  max_data: string | null
+  total: number
 }
 interface VolumeDiarioPonto {
   data: string
@@ -72,7 +78,7 @@ function fmtSeg(s: number): string {
 }
 
 export default function HomePage() {
-  const { period, campanha, operador } = useFilters()
+  const { period, campanha, operador, setPeriod } = useFilters()
   const body = {
     data_inicio: period.dataInicio,
     data_fim: period.dataFim,
@@ -83,6 +89,13 @@ export default function HomePage() {
   const { data, isLoading } = useQuery<DashboardResult>({
     queryKey: ["dashboard-exec", body],
     queryFn: async () => (await api.post("/api/dashboard/executive", body)).data,
+  })
+
+  // Descobre o intervalo real de dados na base — só busca uma vez
+  const { data: dateRange } = useQuery<DateRangeResult>({
+    queryKey: ["dashboard-date-range"],
+    queryFn: async () => (await api.get("/api/dashboard/date-range")).data,
+    staleTime: 5 * 60_000,
   })
 
   const { data: health, isLoading: healthLoading } = useQuery<HealthFull>({
@@ -232,9 +245,43 @@ export default function HomePage() {
           <p className="text-[var(--muted-finexy)]">
             Nenhuma ligação encontrada nos filtros atuais.
           </p>
-          <p className="mt-1 text-xs text-[#9a9a9a]">
-            Tente ampliar o período ou limpar campanha/operador.
-          </p>
+          {dateRange?.min_data && dateRange.max_data ? (
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <p className="text-sm text-[#7c7c7c]">
+                <span className="font-semibold">Dados disponíveis na base:</span>{" "}
+                {(() => {
+                  try {
+                    const ini = format(parseISO(dateRange.min_data), "d 'de' MMM 'de' yyyy", { locale: ptBR })
+                    const fim = format(parseISO(dateRange.max_data), "d 'de' MMM 'de' yyyy", { locale: ptBR })
+                    return `${ini} até ${fim}`
+                  } catch {
+                    return `${dateRange.min_data} até ${dateRange.max_data}`
+                  }
+                })()}{" "}
+                <span className="text-[#9a9a9a]">
+                  ({dateRange.total.toLocaleString("pt-BR")} ligações no total)
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  setPeriod({
+                    preset: "custom",
+                    dataInicio: dateRange.min_data!,
+                    dataFim: dateRange.max_data!,
+                  })
+                }
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-black"
+              >
+                <Calendar className="h-4 w-4" />
+                Aplicar período disponível
+              </button>
+            </div>
+          ) : (
+            <p className="mt-1 text-xs text-[#9a9a9a]">
+              Tente ampliar o período ou limpar campanha/operador.
+            </p>
+          )}
         </div>
       )}
 

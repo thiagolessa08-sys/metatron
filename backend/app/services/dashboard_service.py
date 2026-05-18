@@ -1,13 +1,58 @@
 """
 Dashboard executivo: agregações para a tela inicial.
 Usa apenas TT_ACIONAMENTOS_METATRON (única tabela segura para COUNT/SUM).
+Queries separadas para evitar problemas com múltiplos COUNT(DISTINCT) no Sybase IQ.
 """
+import logging
+
 from app.services.sybase_agent import SybaseAgentClient
 from app.schemas.dashboard import (
     DashboardResult,
+    DateRangeResult,
     VolumeDiarioPonto,
     TopItem,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _safe_int(value, default: int = 0) -> int:
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return int(value)
+    try:
+        return int(float(str(value)))
+    except (ValueError, TypeError):
+        return default
+
+
+async def _try_query(agent: SybaseAgentClient, sql: str, limit: int = 100) -> dict:
+    """Executa SQL e retorna dict vazio em caso de erro (com log)."""
+    try:
+        return await agent.query(sql, limit=limit)
+    except Exception as e:
+        logger.error("Dashboard query failed: %s -- SQL: %s", e, sql[:200])
+        return {"rows": [], "columns": []}
+
+
+async def dashboard_date_range() -> DateRangeResult:
+    """Retorna o intervalo de datas disponível em TT_ACIONAMENTOS_METATRON."""
+    agent = SybaseAgentClient()
+    sql = (
+        "SELECT MIN(data) AS min_data, MAX(data) AS max_data, COUNT(*) AS total "
+        "FROM metatron.TT_ACIONAMENTOS_METATRON"
+    )
+    raw = await _try_query(agent, sql, limit=1)
+    rows = raw.get("rows") or []
+    if not rows:
+        return DateRangeResult(min_data=None, max_data=None, total=0)
+    r = rows[0]
+    return DateRangeResult(
+        min_data=str(r[0]).strip() if r[0] else None,
+        max_data=str(r[1]).strip() if r[1] else None,
+        total=_safe_int(r[2] if len(r) > 2 else 0),
+    )
 
 
 async def dashboard_executive(
@@ -32,81 +77,106 @@ async def dashboard_executive(
         f"WHERE data BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra}"
     )
 
-    # 1) Totais e métricas únicas
-    sql_totais = (
-        "SELECT COUNT(*) AS total, "
-        "COUNT(DISTINCT operador) AS operadores, "
-        "COUNT(DISTINCT campanha) AS campanhas, "
-        "COUNT(DISTINCT descricao) AS qualificacoes, "
-        "SUM(duracao) AS dur_total, "
-        "AVG(duracao) AS dur_media "
-        f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where}"
+    # === 1) Total de ligações (query simples) ===
+    sql_total = (
+        f"SELECT COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON {period_where}"
     )
-    totais_raw = await agent.query(sql_totais, limit=1)
-    total_ligacoes = 0
-    operadores_unicos = 0
-    campanhas_unicas = 0
-    qualificacoes_unicas = 0
+    total_raw = await _try_query(agent, sql_total, limit=1)
+    total_ligacoes = (
+        _safe_int(total_raw["rows"][0][0]) if total_raw.get("rows") else 0
+    )
+
+    # === 2) Operadores únicos ===
+    sql_ops = (
+        f"SELECT COUNT(DISTINCT operador) FROM metatron.TT_ACIONAMENTOS_METATRON {period_where}"
+    )
+    ops_raw = await _try_query(agent, sql_ops, limit=1)
+    operadores_unicos = (
+        _safe_int(ops_raw["rows"][0][0]) if ops_raw.get("rows") else 0
+    )
+
+    # === 3) Campanhas únicas ===
+    sql_camps = (
+        f"SELECT COUNT(DISTINCT campanha) FROM metatron.TT_ACIONAMENTOS_METATRON {period_where}"
+    )
+    camps_raw = await _try_query(agent, sql_camps, limit=1)
+    campanhas_unicas = (
+        _safe_int(camps_raw["rows"][0][0]) if camps_raw.get("rows") else 0
+    )
+
+    # === 4) Qualificações únicas ===
+    sql_quals_count = (
+        f"SELECT COUNT(DISTINCT descricao) FROM metatron.TT_ACIONAMENTOS_METATRON {period_where}"
+    )
+    quals_count_raw = await _try_query(agent, sql_quals_count, limit=1)
+    qualificacoes_unicas = (
+        _safe_int(quals_count_raw["rows"][0][0])
+        if quals_count_raw.get("rows")
+        else 0
+    )
+
+    # === 5) Duração (SUM e AVG separados) ===
     duracao_total_s = 0
     duracao_media_s = 0
-    rows = totais_raw.get("rows") or []
-    if rows:
-        r = rows[0]
-        total_ligacoes = int(r[0] or 0)
-        operadores_unicos = int(r[1] or 0)
-        campanhas_unicas = int(r[2] or 0)
-        qualificacoes_unicas = int(r[3] or 0)
-        duracao_total_s = int(r[4] or 0)
-        duracao_media_s = int(r[5] or 0) if r[5] is not None else 0
+    if total_ligacoes > 0:
+        sql_dur = (
+            "SELECT SUM(duracao) AS dur_total, AVG(duracao) AS dur_media "
+            f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where}"
+        )
+        dur_raw = await _try_query(agent, sql_dur, limit=1)
+        if dur_raw.get("rows"):
+            r = dur_raw["rows"][0]
+            duracao_total_s = _safe_int(r[0])
+            duracao_media_s = _safe_int(r[1])
 
-    # 2) Volume diário
+    # === 6) Volume diário ===
     sql_volume = (
         "SELECT data, COUNT(*) AS total "
         f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where} "
         "GROUP BY data ORDER BY data"
     )
-    volume_raw = await agent.query(sql_volume, limit=400)
+    volume_raw = await _try_query(agent, sql_volume, limit=400)
     volume_diario = [
-        VolumeDiarioPonto(data=str(r[0]).strip(), total=int(r[1] or 0))
+        VolumeDiarioPonto(data=str(r[0]).strip(), total=_safe_int(r[1]))
         for r in volume_raw.get("rows", [])
         if len(r) >= 2 and r[0] is not None
     ]
 
-    # 3) Top qualificações
+    # === 7) Top qualificações ===
     sql_quals = (
         "SELECT descricao, COUNT(*) AS total "
         f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where} "
         "GROUP BY descricao ORDER BY total DESC"
     )
-    quals_raw = await agent.query(sql_quals, limit=100)
+    quals_raw = await _try_query(agent, sql_quals, limit=100)
     top_qualificacoes = [
-        TopItem(nome=str(r[0] or "—").strip() or "—", total=int(r[1] or 0))
+        TopItem(nome=str(r[0] or "—").strip() or "—", total=_safe_int(r[1]))
         for r in quals_raw.get("rows", [])
         if len(r) >= 2
     ][:8]
 
-    # 4) Top campanhas
+    # === 8) Top campanhas ===
     sql_campanhas = (
         "SELECT campanha, COUNT(*) AS total "
         f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where} "
         "GROUP BY campanha ORDER BY total DESC"
     )
-    campanhas_raw = await agent.query(sql_campanhas, limit=50)
+    campanhas_raw = await _try_query(agent, sql_campanhas, limit=50)
     top_campanhas = [
-        TopItem(nome=str(r[0] or "—").strip() or "—", total=int(r[1] or 0))
+        TopItem(nome=str(r[0] or "—").strip() or "—", total=_safe_int(r[1]))
         for r in campanhas_raw.get("rows", [])
         if len(r) >= 2
     ][:8]
 
-    # 5) Top operadores
+    # === 9) Top operadores ===
     sql_operadores = (
         "SELECT operador, COUNT(*) AS total "
         f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where} "
         "GROUP BY operador ORDER BY total DESC"
     )
-    operadores_raw = await agent.query(sql_operadores, limit=200)
+    operadores_raw = await _try_query(agent, sql_operadores, limit=200)
     top_operadores = [
-        TopItem(nome=str(r[0] or "—").strip() or "—", total=int(r[1] or 0))
+        TopItem(nome=str(r[0] or "—").strip() or "—", total=_safe_int(r[1]))
         for r in operadores_raw.get("rows", [])
         if len(r) >= 2
     ][:10]

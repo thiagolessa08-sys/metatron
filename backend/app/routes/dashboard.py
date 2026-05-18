@@ -2,10 +2,17 @@ from fastapi import APIRouter, Depends
 
 from app.auth.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.dashboard import DashboardQuery, DashboardResult
-from app.services.dashboard_service import dashboard_executive
+from app.schemas.dashboard import DashboardQuery, DashboardResult, DateRangeResult
+from app.services.dashboard_service import dashboard_executive, dashboard_date_range
 
 router = APIRouter(prefix="/api/dashboard")
+
+
+@router.get("/date-range", response_model=DateRangeResult)
+async def date_range(user: User = Depends(get_current_user)) -> DateRangeResult:
+    """Retorna MIN/MAX de data em TT_ACIONAMENTOS_METATRON.
+    Útil para descobrir qual período tem dados na base."""
+    return await dashboard_date_range()
 
 
 @router.post("/executive", response_model=DashboardResult)

@@ -6,6 +6,7 @@ import logging
 from collections import defaultdict
 
 from app.services.sybase_agent import SybaseAgentClient
+from app.utils.date_utils import to_sybase_date, from_sybase_date
 from app.schemas.qualificacoes import (
     QualificacoesQuery,
     TendenciaResult,
@@ -24,7 +25,7 @@ def _build_where(q: QualificacoesQuery, operador_forced: str | None) -> str:
     if q.campanha:
         safe_c = q.campanha.replace("'", "''")
         extra += f" AND campanha = '{safe_c}'"
-    return f"WHERE data BETWEEN '{q.data_inicio}' AND '{q.data_fim}'{extra}"
+    return f"WHERE data BETWEEN '{to_sybase_date(q.data_inicio)}' AND '{to_sybase_date(q.data_fim)}'{extra}"
 
 
 async def _safe_query(agent: SybaseAgentClient, sql: str, limit: int) -> dict:
@@ -81,8 +82,10 @@ async def tendencia_qualificacoes(
             continue
         if qual not in top_quals:
             continue
-        por_data[data_str][qual] += total
-        datas_set.add(data_str)
+        # Converter dd/MM/yyyy → yyyy-MM-dd para chave interna e ordenação
+        iso_data = from_sybase_date(data_str)
+        por_data[iso_data][qual] += total
+        datas_set.add(iso_data)
 
     datas_sorted = sorted(datas_set)
     series = [

@@ -6,6 +6,7 @@ import logging
 from collections import defaultdict
 
 from app.services.sybase_agent import SybaseAgentClient
+from app.utils.date_utils import to_sybase_date
 from app.schemas.relatorio_chamadas import (
     ChamadasQuery,
     ChamadasResumo,
@@ -55,9 +56,9 @@ async def chamadas_resumo(q: ChamadasQuery) -> ChamadasResumo:
 
     parts = []
     if q.data_inicio:
-        parts.append(f"data_hora >= '{_safe(q.data_inicio)}'")
+        parts.append(f"data_hora >= '{to_sybase_date(_safe(q.data_inicio))}'")
     if q.data_fim:
-        parts.append(f"data_hora <= '{_safe(q.data_fim)} 23:59:59'")
+        parts.append(f"data_hora <= '{to_sybase_date(_safe(q.data_fim))} 23:59:59'")
     if q.resultado:
         parts.append(f"resultado = '{_safe(q.resultado)}'")
     if q.operadora:

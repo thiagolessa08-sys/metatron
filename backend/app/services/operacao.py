@@ -7,6 +7,7 @@ import logging
 from datetime import date, datetime
 
 from app.services.sybase_agent import SybaseAgentClient
+from app.utils.date_utils import to_sybase_date, from_sybase_date
 from app.schemas.operacao import AgenteAoVivo, OperacaoSnapshot
 
 logger = logging.getLogger(__name__)
@@ -14,9 +15,10 @@ logger = logging.getLogger(__name__)
 _TABLE = "metatron.TT_ACIONAMENTOS_METATRON"
 
 
-async def _count_for_date(agent: SybaseAgentClient, data: str) -> int:
+async def _count_for_date(agent: SybaseAgentClient, data_db: str) -> int:
+    """data_db deve estar no formato dd/MM/yyyy."""
     try:
-        r = await agent.query(f"SELECT COUNT(*) FROM {_TABLE} WHERE data = '{data}'")
+        r = await agent.query(f"SELECT COUNT(*) FROM {_TABLE} WHERE data = '{data_db}'")
         return int((r.get("rows") or [[0]])[0][0] or 0)
     except Exception as e:
         logger.error("count_for_date failed: %s", e)
@@ -24,11 +26,26 @@ async def _count_for_date(agent: SybaseAgentClient, data: str) -> int:
 
 
 async def _latest_date(agent: SybaseAgentClient) -> str | None:
+    """
+    Retorna a data mais recente no banco no formato dd/MM/yyyy.
+    Usa DISTINCT + sort Python porque MAX() sobre VARCHAR dd/MM/yyyy é ordem alfabética,
+    não cronológica (ex: "31/10/2025" > "01/04/2026" alfabeticamente).
+    """
     try:
-        r = await agent.query(f"SELECT MAX(data) FROM {_TABLE}")
+        r = await agent.query(f"SELECT DISTINCT data FROM {_TABLE}", limit=2000)
         rows = r.get("rows") or []
-        if rows and rows[0] and rows[0][0]:
-            return str(rows[0][0]).strip()
+        best: tuple[datetime, str] | None = None
+        for row in rows:
+            if not (row and row[0]):
+                continue
+            raw = str(row[0]).strip()
+            try:
+                dt = datetime.strptime(raw, "%d/%m/%Y")
+            except ValueError:
+                continue
+            if best is None or dt > best[0]:
+                best = (dt, raw)
+        return best[1] if best else None
     except Exception as e:
         logger.error("latest_date failed: %s", e)
     return None
@@ -36,18 +53,21 @@ async def _latest_date(agent: SybaseAgentClient) -> str | None:
 
 async def get_snapshot() -> OperacaoSnapshot:
     agent = SybaseAgentClient()
-    today = date.today().isoformat()
+    today_iso = date.today().isoformat()       # yyyy-MM-dd para comparações Python
+    today_db = to_sybase_date(today_iso)       # dd/MM/yyyy para queries Sybase
     is_today = True
 
     # Tenta hoje primeiro. Se zero, cai pro último dia com dados.
-    total_hoje = await _count_for_date(agent, today)
-    data_alvo = today
+    total_hoje = await _count_for_date(agent, today_db)
+    data_alvo_db = today_db    # dd/MM/yyyy — usado nas queries
+    data_alvo_iso = today_iso  # yyyy-MM-dd — retornado ao frontend
 
     if total_hoje == 0:
-        latest = await _latest_date(agent)
-        if latest and latest != today:
-            data_alvo = latest
-            total_hoje = await _count_for_date(agent, data_alvo)
+        latest_db = await _latest_date(agent)  # retorna dd/MM/yyyy ou None
+        if latest_db and from_sybase_date(latest_db) != today_iso:
+            data_alvo_db = latest_db
+            data_alvo_iso = from_sybase_date(latest_db)
+            total_hoje = await _count_for_date(agent, data_alvo_db)
             is_today = False
 
     # Agentes ativos no dia alvo com métricas
@@ -57,7 +77,7 @@ async def get_snapshot() -> OperacaoSnapshot:
             r_agentes = await agent.query(
                 f"SELECT operador, COUNT(*) AS total, AVG(duracao) AS dur_media, MAX(hora) AS ultima "
                 f"FROM {_TABLE} "
-                f"WHERE data = '{data_alvo}' AND operador IS NOT NULL "
+                f"WHERE data = '{data_alvo_db}' AND operador IS NOT NULL "
                 f"GROUP BY operador ORDER BY total DESC",
                 limit=200,
             )
@@ -82,6 +102,6 @@ async def get_snapshot() -> OperacaoSnapshot:
         agentes_ativos=len(por_agente),
         por_agente=por_agente,
         atualizado_em=datetime.now().strftime("%H:%M:%S"),
-        data_referencia=data_alvo,
+        data_referencia=data_alvo_iso,  # sempre ISO para o frontend
         is_today=is_today,
     )

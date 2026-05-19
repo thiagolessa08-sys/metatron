@@ -42,15 +42,15 @@ async def get_agentes_metricas(q: AgentesQuery) -> AgentesResult:
     for row in r_quals.get("rows", []):
         op = str(row[0]).strip() if row[0] else ""
         qual = str(row[1]).strip() if row[1] else "Sem qualificação"
-        qtd = int(row[2]) if row[2] else 0
+        qtd = int(float(row[2])) if row[2] else 0
         quals_map.setdefault(op, {})[qual] = qtd
 
     items = []
     for row in r_totais.get("rows", []):
         op = str(row[0]).strip() if row[0] else "—"
-        total = int(row[1]) if row[1] else 0
-        dur_total = int(row[2]) if row[2] else 0
-        dur_media = int(row[3]) if row[3] else 0
+        total = int(float(row[1])) if row[1] else 0
+        dur_total = int(float(row[2])) if row[2] else 0
+        dur_media = int(float(row[3])) if row[3] else 0
         items.append(AgenteMetrica(
             operador=op,
             total_ligacoes=total,

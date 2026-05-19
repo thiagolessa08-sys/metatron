@@ -110,7 +110,7 @@ export default function HomePage() {
   const volumeOption = data
     ? {
         tooltip: { trigger: "axis" },
-        grid: { left: 50, right: 20, top: 20, bottom: 50 },
+        grid: { left: 50, right: 20, top: 8, bottom: 36 },
         xAxis: {
           type: "category",
           data: data.volume_diario.map((d) => {
@@ -425,7 +425,7 @@ export default function HomePage() {
                   Evolução de ligações no período
                 </p>
               </div>
-              {volumeOption && <ReactECharts option={volumeOption} style={{ height: 260 }} />}
+              {volumeOption && <ReactECharts option={volumeOption} style={{ height: 300 }} />}
             </div>
 
             <div

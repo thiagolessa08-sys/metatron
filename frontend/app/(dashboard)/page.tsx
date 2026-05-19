@@ -409,7 +409,7 @@ export default function HomePage() {
               }
               icon={<Tag className="h-4 w-4" />}
               valueSize="md"
-              bgColor="#fff4ee"
+              highlight
             />
           </section>
 

@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class AproveitamentoQuery(BaseModel):
     campanha: str | None = None
     servidor: str | None = None
+    empresa: str | None = None
 
 
 class AproveitamentoItem(BaseModel):

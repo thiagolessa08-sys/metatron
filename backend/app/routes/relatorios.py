@@ -10,7 +10,7 @@ from app.schemas.qualificacoes import (
 )
 from app.schemas.aproveitamento import AproveitamentoQuery, AproveitamentoResult
 from app.services.relatorio_qualificacoes import get_qualificacoes
-from app.services.relatorio_aproveitamento import get_aproveitamento
+from app.services.relatorio_aproveitamento import get_aproveitamento, list_empresas
 from app.services.qualificacoes_extras import (
     tendencia_qualificacoes,
     heatmap_operador_qualificacao,
@@ -70,6 +70,11 @@ async def relatorio_qualificacoes_heatmap(
     return await heatmap_operador_qualificacao(
         q, operador_forced=operador_forced, top_op=10, top_q=10
     )
+
+
+@router.get("/aproveitamento/empresas", response_model=list[str])
+async def aproveitamento_empresas(_user: User = Depends(get_current_user)):
+    return await list_empresas()
 
 
 @router.post("/aproveitamento", response_model=AproveitamentoResult)

@@ -1,11 +1,12 @@
 "use client"
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import ReactECharts from "echarts-for-react"
 import { ExportButton } from "@/components/relatorios/export-button"
 import { Skeleton } from "@/components/ui/skeleton"
 import api from "@/lib/api"
 import { useFilters } from "@/lib/filters-context"
-import { Phone, Target, Users, Gauge, Award, AlertCircle, Package, Radio } from "lucide-react"
+import { Phone, Target, Users, Gauge, Award, AlertCircle, Package, Radio, Building2, ChevronDown } from "lucide-react"
 
 interface AprItem {
   campanha: string
@@ -26,7 +27,15 @@ interface AprResult {
 
 export default function AproveitamentoPage() {
   const { campanha } = useFilters()
-  const body = { campanha: campanha ?? undefined }
+  const [empresa, setEmpresa] = useState<string | null>(null)
+
+  const { data: empresas = [] } = useQuery<string[]>({
+    queryKey: ["aproveitamento-empresas"],
+    queryFn: async () => (await api.get("/api/relatorios/aproveitamento/empresas")).data,
+    staleTime: 5 * 60_000,
+  })
+
+  const body = { campanha: campanha ?? undefined, empresa: empresa ?? undefined }
 
   const { data, isLoading, isError } = useQuery<AprResult>({
     queryKey: ["aproveitamento", body],
@@ -230,11 +239,29 @@ export default function AproveitamentoPage() {
             Funil de conversão e eficiência por campanha
           </p>
         </div>
-        <ExportButton
-          endpoint="/api/relatorios/aproveitamento"
-          body={body}
-          filename="aproveitamento"
-        />
+        <div className="flex items-center gap-3">
+          {empresas.length > 0 && (
+            <div className="relative flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-xs font-semibold text-[var(--ink)]" style={{ boxShadow: "var(--shadow-card)" }}>
+              <Building2 className="h-3.5 w-3.5 text-[var(--muted-finexy)]" />
+              <select
+                value={empresa ?? ""}
+                onChange={(e) => setEmpresa(e.target.value || null)}
+                className="appearance-none bg-transparent pr-4 outline-none cursor-pointer"
+              >
+                <option value="">Todas as empresas</option>
+                {empresas.map((e) => (
+                  <option key={e} value={e}>{e}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 h-3 w-3 text-[var(--muted-finexy)]" />
+            </div>
+          )}
+          <ExportButton
+            endpoint="/api/relatorios/aproveitamento"
+            body={body}
+            filename="aproveitamento"
+          />
+        </div>
       </div>
 
       {isLoading && (

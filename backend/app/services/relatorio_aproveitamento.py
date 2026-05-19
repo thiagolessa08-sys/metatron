@@ -22,6 +22,16 @@ def _to_float(v) -> float:
         return 0.0
 
 
+async def list_empresas() -> list[str]:
+    agent = SybaseAgentClient()
+    r = await agent.query(
+        f"SELECT empresa FROM {_TABLE} WHERE empresa IS NOT NULL AND empresa <> '' "
+        "GROUP BY empresa ORDER BY empresa",
+        limit=500,
+    )
+    return [str(row[0]).strip() for row in r.get("rows", []) if row[0]]
+
+
 async def get_aproveitamento(q: AproveitamentoQuery) -> AproveitamentoResult:
     agent = SybaseAgentClient()
 
@@ -37,6 +47,8 @@ async def get_aproveitamento(q: AproveitamentoQuery) -> AproveitamentoResult:
         clauses.append(f"campanha = '{_safe(q.campanha)}'")
     if q.servidor:
         clauses.append(f"servidor = '{_safe(q.servidor)}'")
+    if q.empresa:
+        clauses.append(f"empresa = '{_safe(q.empresa)}'")
     if clauses:
         sql += " WHERE " + " AND ".join(clauses)
     sql += " GROUP BY campanha ORDER BY campanha"

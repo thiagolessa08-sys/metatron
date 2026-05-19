@@ -1,8 +1,6 @@
 "use client"
 import { Suspense, useState, useMemo } from "react"
-import { useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { FilterBar } from "@/components/filters/filter-bar"
 import { ExportButton } from "@/components/relatorios/export-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -12,7 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import api from "@/lib/api"
-import { format, startOfMonth, differenceInDays, parseISO } from "date-fns"
+import { useFilters } from "@/lib/filters-context"
+import { differenceInDays, parseISO } from "date-fns"
 import ReactECharts from "echarts-for-react"
 import { ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react"
 
@@ -39,10 +38,6 @@ function fmtTempo(s: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
 }
 
-function today() { return format(new Date(), "yyyy-MM-dd") }
-function defaultStart() { return format(startOfMonth(new Date()), "yyyy-MM-dd") }
-
-// Cores fixas para qualificações no gráfico empilhado
 const QUAL_COLORS = [
   "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
   "#8b5cf6", "#06b6d4", "#f97316", "#84cc16",
@@ -77,12 +72,12 @@ function SortHeader({
 }
 
 function AgentesContent() {
-  const params = useSearchParams()
+  const { period, campanha, operador } = useFilters()
   const body = {
-    data_inicio: params.get("data_inicio") ?? defaultStart(),
-    data_fim: params.get("data_fim") ?? today(),
-    campanha: params.get("campanha") ?? undefined,
-    operador: params.get("operador") ?? undefined,
+    data_inicio: period.dataInicio,
+    data_fim: period.dataFim,
+    campanha: campanha ?? undefined,
+    operador: operador ?? undefined,
   }
 
   const diasPeriodo = useMemo(() => {
@@ -95,12 +90,9 @@ function AgentesContent() {
     queryFn: async () => (await api.post("/api/agentes/metricas", body)).data,
   })
 
-  // Estado da tab tabela
   const [busca, setBusca] = useState("")
   const [sortKey, setSortKey] = useState<SortKey>("total_ligacoes")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
-
-  // Estado da tab comparação
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
   function toggleSort(k: SortKey) {
@@ -122,7 +114,6 @@ function AgentesContent() {
       })
   }, [data, busca, sortKey, sortDir])
 
-  // Qualificações únicas para o gráfico empilhado
   const todasQuals = useMemo(() => {
     if (!data) return []
     const set = new Set<string>()
@@ -130,10 +121,8 @@ function AgentesContent() {
     return Array.from(set).sort()
   }, [data])
 
-  // Top 15 agentes por ligações para os gráficos
   const top15 = useMemo(() => data?.items.slice(0, 15) ?? [], [data])
 
-  // Gráfico empilhado de qualificações
   const qualChartOption = useMemo(() => ({
     tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
     legend: { type: "scroll", bottom: 0, data: todasQuals },
@@ -154,7 +143,6 @@ function AgentesContent() {
     })),
   }), [top15, todasQuals])
 
-  // Gráfico de comparação entre agentes selecionados
   const agentesComparar = useMemo(
     () => data?.items.filter(i => selecionados.has(i.operador)) ?? [],
     [data, selecionados]
@@ -397,7 +385,6 @@ function AgentesContent() {
                   <ReactECharts option={compareChartOption} style={{ height: 360 }} />
                 </CardContent>
               </Card>
-              {/* Tabela comparativa detalhada */}
               <Card>
                 <CardContent className="pt-4 overflow-x-auto">
                   <Table>
@@ -444,6 +431,17 @@ function AgentesContent() {
   )
 }
 
+function ExportWrapper() {
+  const { period, campanha, operador } = useFilters()
+  const body = {
+    data_inicio: period.dataInicio,
+    data_fim: period.dataFim,
+    campanha: campanha ?? undefined,
+    operador: operador ?? undefined,
+  }
+  return <ExportButton endpoint="/api/agentes/metricas" body={body} filename="agentes" />
+}
+
 export default function AgentesPage() {
   return (
     <div className="space-y-6">
@@ -458,23 +456,7 @@ export default function AgentesPage() {
           <ExportWrapper />
         </Suspense>
       </div>
-      <Suspense fallback={<Skeleton className="h-12 w-full" />}>
-        <FilterBar fields={["periodo", "campanha", "operador"]} />
-      </Suspense>
-      <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-        <AgentesContent />
-      </Suspense>
+      <AgentesContent />
     </div>
   )
-}
-
-function ExportWrapper() {
-  const params = useSearchParams()
-  const body = {
-    data_inicio: params.get("data_inicio") ?? format(startOfMonth(new Date()), "yyyy-MM-dd"),
-    data_fim: params.get("data_fim") ?? format(new Date(), "yyyy-MM-dd"),
-    campanha: params.get("campanha") ?? undefined,
-    operador: params.get("operador") ?? undefined,
-  }
-  return <ExportButton endpoint="/api/agentes/metricas" body={body} filename="agentes" />
 }

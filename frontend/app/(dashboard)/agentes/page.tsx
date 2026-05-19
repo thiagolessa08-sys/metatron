@@ -85,7 +85,7 @@ function AgentesContent() {
     return Math.max(d, 1)
   }, [body.data_inicio, body.data_fim])
 
-  const { data, isLoading, isError } = useQuery<AgentesResult>({
+  const { data, isLoading, isError, error } = useQuery<AgentesResult>({
     queryKey: ["agentes-metricas", body],
     queryFn: async () => (await api.post("/api/agentes/metricas", body)).data,
   })
@@ -192,11 +192,16 @@ function AgentesContent() {
   }
 
   if (isLoading) return <Skeleton className="h-96 w-full" />
-  if (isError) return (
-    <div className="rounded-lg border border-destructive/50 p-6 text-center text-destructive">
-      Erro ao carregar dados. O agente Sybase pode estar indisponível.
-    </div>
-  )
+  if (isError) {
+    const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+    const msg = detail ?? (error instanceof Error ? error.message : String(error))
+    return (
+      <div className="rounded-lg border border-destructive/50 p-6 space-y-1 text-destructive">
+        <p className="font-semibold text-center">Erro ao carregar dados</p>
+        <p className="text-xs text-center font-mono break-all opacity-80">{msg}</p>
+      </div>
+    )
+  }
   if (!data || data.items.length === 0) return (
     <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
       Nenhum dado para os filtros selecionados.

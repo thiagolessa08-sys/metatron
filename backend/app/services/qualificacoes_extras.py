@@ -24,7 +24,7 @@ def _build_where(q: QualificacoesQuery, operador_forced: str | None) -> str:
     if q.campanha:
         safe_c = q.campanha.replace("'", "''")
         extra += f" AND campanha = '{safe_c}'"
-    return f"WHERE data_correta BETWEEN '{q.data_inicio}' AND '{q.data_fim}'{extra}"
+    return f"WHERE data BETWEEN '{q.data_inicio}' AND '{q.data_fim}'{extra}"
 
 
 async def _safe_query(agent: SybaseAgentClient, sql: str, limit: int) -> dict:
@@ -60,10 +60,10 @@ async def tendencia_qualificacoes(
     # 2) Volume diário das top N
     in_list = ", ".join(f"'{q_.replace(chr(39), chr(39) + chr(39))}'" for q_ in top_quals)
     sql_serie = (
-        "SELECT data_correta, descricao, COUNT(*) AS total "
+        "SELECT data, descricao, COUNT(*) AS total "
         f"FROM metatron.TT_ACIONAMENTOS_METATRON {where} "
         f"AND descricao IN ({in_list}) "
-        "GROUP BY data_correta, descricao ORDER BY data_correta"
+        "GROUP BY data, descricao ORDER BY data"
     )
     serie_raw = await _safe_query(agent, sql_serie, limit=5000)
 

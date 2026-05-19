@@ -66,10 +66,10 @@ async def cockpit_heatmap(
     # Query única: data + hora → COUNT
     # DATEPART(hour, hora) agrupa por hora inteira — hora é TIME com precisão de segundos
     sql = (
-        "SELECT data_correta, DATEPART(hour, hora) AS hora_num, COUNT(*) AS total "
+        "SELECT data, DATEPART(hour, hora) AS hora_num, COUNT(*) AS total "
         "FROM metatron.TT_ACIONAMENTOS_METATRON "
-        f"WHERE data_correta BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra} "
-        "GROUP BY data_correta, DATEPART(hour, hora)"
+        f"WHERE data BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra} "
+        "GROUP BY data, DATEPART(hour, hora)"
     )
     raw = await agent.query(sql, limit=10000)
 
@@ -90,7 +90,7 @@ async def cockpit_heatmap(
     for row in raw.get("rows", []):
         if len(row) < 3:
             continue
-        # data_correta retorna "YYYY-MM-DD 00:00:00.0" — usar só os 10 primeiros chars
+        # data retorna "YYYY-MM-DD 00:00:00.0" — usar só os 10 primeiros chars
         data_str = str(row[0]).strip()[:10]
         hora_int = _parse_hora(row[1])
         try:

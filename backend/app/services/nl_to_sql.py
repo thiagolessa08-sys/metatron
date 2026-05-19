@@ -20,7 +20,7 @@ Colunas:
 - campanha (varchar) — identifica a campanha; formato '<empresa>_<nome>' (ex: '6220_elaine_sp')
 - cpf (varchar) — CPF do contato (sem máscara)
 - telefone (varchar) — número discado (sem máscara, ex: '11945003524')
-- data_correta (TIMESTAMP) — data/hora do acionamento; use BETWEEN com literais ISO: WHERE data_correta BETWEEN '2026-01-01' AND '2026-04-01'
+- data (TIMESTAMP) — data/hora do acionamento; use BETWEEN com literais ISO: WHERE data BETWEEN '2026-01-01' AND '2026-04-01'
 - hora (TIME) — hora isolada; DATEPART(hour, hora) extrai a hora inteira (0-23)
 - duracao (INTEGER) — duração da chamada em segundos
 - operador (varchar) — nome do atendente (ex: 'EMERSON_ALEXANDRE')
@@ -48,7 +48,8 @@ Fórmula de aproveitamento real: localizados / total * 100.
 ### metatron.TT_RELATORIO_METATRON
 Detalhamento de chamadas com tarifação (granular por chamada, mas via fornecedor de telefonia).
 Colunas varchar:
-- data_hora (varchar), numero (varchar) — telefone discado, casa com TT_ACIONAMENTOS.telefone
+- datahora (TIMESTAMP) — data/hora da chamada; use BETWEEN para filtrar por período
+- numero (varchar) — telefone discado, casa com TT_ACIONAMENTOS.telefone
 - TechPrefix (varchar), Tipo_Numero (varchar), Operadora (varchar)
 - resultado (varchar), codigo_desligamento (varchar)
 - data (TIMESTAMP)
@@ -87,9 +88,9 @@ Você recebe perguntas em português e gera **apenas SQL Sybase IQ** correto e p
    Errado: SELECT * FROM metatron.TT_ACIONAMENTOS_METATRON
    Certo:  SELECT TOP 100 operador, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON
 
-3. **Datas: use BETWEEN com literais 'YYYY-MM-DD' na coluna data_correta** — nunca YEAR(), MONTH() ou DATE().
-   Errado: WHERE YEAR(data_correta) = 2026
-   Certo:  WHERE data_correta BETWEEN '2026-01-01' AND '2026-12-31'
+3. **Datas: use BETWEEN com literais 'YYYY-MM-DD' na coluna data** — nunca YEAR(), MONTH() ou DATE().
+   Errado: WHERE YEAR(data) = 2026
+   Certo:  WHERE data BETWEEN '2026-01-01' AND '2026-12-31'
 
 4. **LIKE: nunca wildcard no início** — LIKE '%texto' força full scan.
    Errado: WHERE descricao LIKE '%CONVER%'
@@ -133,7 +134,7 @@ Se não houver gráfico adequado, omita o campo chart_hint.
 
 Pergunta: "Quantas ligações por operador hoje?"
 Resposta:
-{{"sql": "SELECT operador, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data_correta = '2026-05-18' GROUP BY operador ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "total"}}}}
+{{"sql": "SELECT operador, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data = '2026-05-18' GROUP BY operador ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "total"}}}}
 
 Pergunta: "Qual o aproveitamento das campanhas ativas?"
 Resposta:
@@ -141,7 +142,7 @@ Resposta:
 
 Pergunta: "Qual operador ficou mais tempo em ligação na semana passada?"
 Resposta:
-{{"sql": "SELECT operador, SUM(duracao) AS tempo_total_s FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data_correta BETWEEN '2026-05-10' AND '2026-05-16' GROUP BY operador ORDER BY tempo_total_s DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "tempo_total_s"}}}}
+{{"sql": "SELECT operador, SUM(duracao) AS tempo_total_s FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data BETWEEN '2026-05-10' AND '2026-05-16' GROUP BY operador ORDER BY tempo_total_s DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "tempo_total_s"}}}}
 
 Pergunta: "Qual o custo total por operadora?"
 Resposta:
@@ -157,7 +158,7 @@ Resposta (JOIN acionamentos × métricas pela coluna campanha):
 
 Pergunta: "Custo total por operador no último mês"
 Resposta (JOIN acionamentos × relatório pelo telefone):
-{{"sql": "SELECT a.operador, SUM(r.valor) AS custo_total FROM metatron.TT_ACIONAMENTOS_METATRON a INNER JOIN metatron.TT_RELATORIO_METATRON r ON a.telefone = r.numero WHERE a.data_correta BETWEEN '2026-04-18' AND '2026-05-18' GROUP BY a.operador ORDER BY custo_total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "custo_total"}}}}
+{{"sql": "SELECT a.operador, SUM(r.valor) AS custo_total FROM metatron.TT_ACIONAMENTOS_METATRON a INNER JOIN metatron.TT_RELATORIO_METATRON r ON a.telefone = r.numero WHERE a.data BETWEEN '2026-04-18' AND '2026-05-18' GROUP BY a.operador ORDER BY custo_total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "custo_total"}}}}
 
 Pergunta: "Volume de ligações da empresa 6220"
 Resposta (empresa = prefixo da campanha):

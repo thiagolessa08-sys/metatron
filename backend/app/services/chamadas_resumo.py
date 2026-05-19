@@ -55,9 +55,9 @@ async def chamadas_resumo(q: ChamadasQuery) -> ChamadasResumo:
 
     parts = []
     if q.data_inicio:
-        parts.append(f"data_hora >= '{_safe(q.data_inicio)}'")
+        parts.append(f"datahora >= '{_safe(q.data_inicio)}'")
     if q.data_fim:
-        parts.append(f"data_hora <= '{_safe(q.data_fim)} 23:59:59'")
+        parts.append(f"datahora <= '{_safe(q.data_fim)} 23:59:59'")
     if q.resultado:
         parts.append(f"resultado = '{_safe(q.resultado)}'")
     if q.operadora:
@@ -66,7 +66,7 @@ async def chamadas_resumo(q: ChamadasQuery) -> ChamadasResumo:
 
     # Lê todas as colunas necessárias — agregação é Python (VARCHAR não permite SUM/AVG aqui)
     sql = (
-        f"SELECT data_hora, Operadora, duracao, Valor "
+        f"SELECT datahora, Operadora, duracao, Valor "
         f"FROM {_TABLE} {where}"
     )
 
@@ -98,7 +98,7 @@ async def chamadas_resumo(q: ChamadasQuery) -> ChamadasResumo:
     for row in raw.get("rows", []):
         if len(row) < 4:
             continue
-        data_hora = str(row[0] or "").strip()
+        datahora = str(row[0] or "").strip()
         oper = str(row[1] or "—").strip() or "—"
         dur = _to_float(row[2])
         valor = _to_float(row[3])
@@ -111,9 +111,9 @@ async def chamadas_resumo(q: ChamadasQuery) -> ChamadasResumo:
         if dur >= 120:
             chamadas_longas += 1
 
-        # Extrai hora do data_hora (formato esperado "yyyy-MM-dd HH:MM:SS")
-        if " " in data_hora:
-            time_part = data_hora.split(" ")[1]
+        # Extrai hora do datahora (formato esperado "yyyy-MM-dd HH:MM:SS")
+        if " " in datahora:
+            time_part = datahora.split(" ")[1]
             try:
                 h = int(time_part.split(":")[0])
                 if 0 <= h < 24:

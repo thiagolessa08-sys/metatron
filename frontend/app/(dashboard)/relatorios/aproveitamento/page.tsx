@@ -93,39 +93,70 @@ export default function AproveitamentoPage() {
     : null
 
   // Gauge aproveitamento médio
+  const gaugeColor = t
+    ? t.aproveitamento >= 50
+      ? "#16a34a"
+      : t.aproveitamento >= 25
+        ? "#f59e0b"
+        : "#ef4444"
+    : "#111"
+
   const gaugeOption = t
     ? {
         series: [
           {
             type: "gauge",
-            startAngle: 200,
-            endAngle: -20,
+            startAngle: 180,
+            endAngle: 0,
             min: 0,
             max: 100,
-            progress: { show: true, width: 22 },
+            radius: "90%",
+            center: ["50%", "72%"],
+            progress: {
+              show: true,
+              width: 24,
+              roundCap: true,
+              itemStyle: { color: gaugeColor },
+            },
             axisLine: {
+              roundCap: true,
               lineStyle: {
-                width: 22,
+                width: 24,
                 color: [
-                  [0.25, "#e23b3b"],
-                  [0.5, "#f4a51b"],
-                  [1, "#16a34a"],
+                  [0.25, "#fecaca"],
+                  [0.5, "#fde68a"],
+                  [1, "#bbf7d0"],
                 ],
               },
             },
-            pointer: { length: "60%", width: 6, itemStyle: { color: "#111" } },
+            pointer: {
+              show: true,
+              length: "58%",
+              width: 5,
+              itemStyle: { color: "#1f2937" },
+            },
+            anchor: {
+              show: true,
+              size: 16,
+              itemStyle: {
+                color: "#1f2937",
+                borderColor: "#f9fafb",
+                borderWidth: 3,
+              },
+            },
             axisTick: { show: false },
-            splitLine: { length: 10, lineStyle: { color: "#fff", width: 2 } },
-            axisLabel: { color: "#9a9a9a", fontSize: 10, distance: -30 },
+            splitLine: { show: false },
+            axisLabel: { show: false },
+            title: { show: false },
             detail: {
               valueAnimation: true,
-              fontSize: 32,
-              fontWeight: 700,
-              color: "#111",
+              fontSize: 44,
+              fontWeight: 800,
+              color: gaugeColor,
               formatter: "{value}%",
-              offsetCenter: [0, "20%"],
+              offsetCenter: [0, "-18%"],
             },
-            data: [{ value: t.aproveitamento, name: "Aproveitamento" }],
+            data: [{ value: t.aproveitamento }],
           },
         ],
       }

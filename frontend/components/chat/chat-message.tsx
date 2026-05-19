@@ -1,10 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { SqlReveal } from "./sql-reveal"
 import { ResultTable } from "./result-table"
 import { ResultChart } from "./result-chart"
-import { AlertCircle, Bot, User } from "lucide-react"
+import { AlertCircle, BarChart3, Bot, Table as TableIcon, User } from "lucide-react"
 
 export interface Message {
   role: "user" | "assistant"
@@ -22,12 +23,19 @@ interface ChatMessageProps {
   message: Message
 }
 
+type View = "chart" | "table"
+
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user"
+  const hasChart =
+    !!message.chart_hint &&
+    message.chart_hint.type !== "none" &&
+    !!message.rows?.length
+  const hasData = !!message.columns?.length && !!message.rows?.length
+  const [view, setView] = useState<View>(hasChart ? "chart" : "table")
 
   return (
     <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
-      {/* Avatar */}
       <div
         className={cn(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium",
@@ -37,8 +45,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
       </div>
 
-      {/* Balão */}
-      <div className={cn("max-w-[85%] space-y-1", isUser && "items-end flex flex-col")}>
+      <div className={cn("max-w-[85%] space-y-2", isUser && "items-end flex flex-col")}>
         <div
           className={cn(
             "rounded-xl px-4 py-2.5 text-sm",
@@ -50,7 +57,6 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {message.content}
         </div>
 
-        {/* Erro */}
         {message.error && (
           <div className="flex items-start gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
@@ -58,29 +64,76 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </div>
         )}
 
-        {/* Análise + resultados (apenas mensagens do assistente com dados) */}
-        {!isUser && message.columns && message.columns.length > 0 && (
-          <div className="w-full space-y-1">
+        {!isUser && hasData && (
+          <div className="w-full space-y-2">
             {message.analysis && (
-              <p className="text-xs text-muted-foreground leading-relaxed px-1">{message.analysis}</p>
+              <p className="px-1 text-xs leading-relaxed text-muted-foreground">
+                {message.analysis}
+              </p>
             )}
-            {message.chart_hint && message.chart_hint.type !== "none" && (
+
+            {hasChart && (
+              <div className="flex items-center gap-2">
+                <ViewToggle
+                  active={view === "chart"}
+                  onClick={() => setView("chart")}
+                  icon={<BarChart3 className="h-3.5 w-3.5" />}
+                  label="Gráfico"
+                />
+                <ViewToggle
+                  active={view === "table"}
+                  onClick={() => setView("table")}
+                  icon={<TableIcon className="h-3.5 w-3.5" />}
+                  label="Tabela"
+                />
+              </div>
+            )}
+
+            {hasChart && view === "chart" ? (
               <ResultChart
-                columns={message.columns}
+                columns={message.columns!}
                 rows={message.rows ?? []}
-                hint={message.chart_hint}
+                hint={message.chart_hint!}
               />
+            ) : (
+              <ResultTable columns={message.columns!} rows={message.rows ?? []} />
             )}
-            <ResultTable columns={message.columns} rows={message.rows ?? []} />
+
             {message.sql && <SqlReveal sql={message.sql} />}
           </div>
         )}
 
-        {/* SQL sem dados (erro de execução mas SQL existe) */}
-        {!isUser && !message.columns?.length && message.sql && (
-          <SqlReveal sql={message.sql} />
-        )}
+        {!isUser && !hasData && message.sql && <SqlReveal sql={message.sql} />}
       </div>
     </div>
+  )
+}
+
+function ViewToggle({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean
+  onClick: () => void
+  icon: React.ReactNode
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
+        active
+          ? "text-white"
+          : "border border-[var(--line-2)] bg-white text-[var(--ink)] hover:bg-[#f5f5f5]"
+      )}
+      style={active ? { background: "var(--orange)" } : undefined}
+    >
+      {icon}
+      {label}
+    </button>
   )
 }

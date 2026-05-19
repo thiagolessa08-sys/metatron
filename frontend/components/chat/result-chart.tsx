@@ -50,8 +50,11 @@ export function ResultChart({ columns, rows, hint }: ResultChartProps) {
   }
 
   return (
-    <div className="mt-3 rounded-md border border-border/50 overflow-hidden">
-      <ReactECharts option={option} style={{ height: 220 }} theme="default" />
+    <div
+      className="mt-3 overflow-hidden rounded-[14px] border border-[var(--line-2)] bg-white p-3"
+      style={{ boxShadow: "var(--shadow-card)" }}
+    >
+      <ReactECharts option={option} style={{ height: 280 }} theme="default" />
     </div>
   )
 }

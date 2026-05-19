@@ -60,13 +60,13 @@ export function ResultTable({ columns, rows }: ResultTableProps) {
       style={{ boxShadow: "var(--shadow-card)" }}
     >
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs">
           <thead>
             <tr style={{ background: "var(--orange)" }}>
               {columns.map((col, ci) => (
                 <th
                   key={col}
-                  className={`whitespace-nowrap px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white ${
+                  className={`whitespace-nowrap px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white ${
                     numericCols[ci] ? "text-right" : "text-left"
                   }`}
                 >
@@ -84,7 +84,7 @@ export function ResultTable({ columns, rows }: ResultTableProps) {
                 {row.map((cell, j) => (
                   <td
                     key={j}
-                    className={`whitespace-nowrap px-4 py-2.5 ${
+                    className={`whitespace-nowrap px-3 py-1.5 ${
                       numericCols[j]
                         ? "text-right tabular-nums text-[var(--ink)]"
                         : "text-left text-[var(--ink)]"

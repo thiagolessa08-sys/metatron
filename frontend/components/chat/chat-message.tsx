@@ -25,6 +25,35 @@ interface ChatMessageProps {
 
 type View = "chart" | "table" | "sql"
 
+/** Renderiza markdown básico: **negrito**, quebras de linha e títulos # */
+function MarkdownText({ text, className }: { text: string; className?: string }) {
+  const lines = text.split(/\n/)
+  return (
+    <div className={className}>
+      {lines.map((line, i) => {
+        const isHeading = /^#{1,3}\s/.test(line)
+        const stripped = isHeading ? line.replace(/^#{1,3}\s/, "") : line
+
+        // Divide por **negrito**
+        const parts = stripped.split(/\*\*([^*]+)\*\*/)
+        const rendered = parts.map((part, j) =>
+          j % 2 === 1 ? <strong key={j}>{part}</strong> : <span key={j}>{part}</span>
+        )
+
+        if (isHeading) {
+          return (
+            <p key={i} className="font-semibold mt-1 first:mt-0">
+              {rendered}
+            </p>
+          )
+        }
+        if (stripped.trim() === "") return <div key={i} className="h-2" />
+        return <p key={i} className="mt-0.5 first:mt-0">{rendered}</p>
+      })}
+    </div>
+  )
+}
+
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user"
   const hasData = !!message.columns?.length && !!message.rows?.length
@@ -45,13 +74,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
       <div className={cn("max-w-[85%] space-y-2", isUser && "items-end flex flex-col")}>
         <div
           className={cn(
-            "rounded-xl px-4 py-2.5 text-sm",
+            "rounded-xl px-4 py-2.5 text-sm leading-relaxed",
             isUser
               ? "bg-primary text-primary-foreground"
               : "bg-muted/60 text-foreground border border-border/40"
           )}
         >
-          {message.content}
+          {isUser ? (
+            message.content
+          ) : (
+            <MarkdownText text={message.content} />
+          )}
         </div>
 
         {message.error && (
@@ -63,12 +96,6 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
         {!isUser && hasData && (
           <div className="w-full space-y-2">
-            {message.analysis && (
-              <p className="px-1 text-xs leading-relaxed text-muted-foreground">
-                {message.analysis}
-              </p>
-            )}
-
             <div className="flex items-center gap-2">
               {hasChart && (
                 <ViewToggle

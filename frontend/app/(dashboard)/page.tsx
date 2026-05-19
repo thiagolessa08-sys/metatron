@@ -409,6 +409,7 @@ export default function HomePage() {
               }
               icon={<Tag className="h-4 w-4" />}
               valueSize="md"
+              bgColor="#fff4ee"
             />
           </section>
 
@@ -577,6 +578,7 @@ function Kpi({
   valueSize = "default",
   sparklineData,
   trend,
+  bgColor,
 }: {
   label: string
   value: string
@@ -586,6 +588,7 @@ function Kpi({
   valueSize?: "default" | "md"
   sparklineData?: number[]
   trend?: number | null
+  bgColor?: string
 }) {
   const hasSparkline = sparklineData && sparklineData.length >= 2
   const sparkColor = highlight ? "rgba(255,255,255,0.6)" : "#ffb08a"
@@ -597,7 +600,7 @@ function Kpi({
         highlight ? "text-white" : "bg-white text-[var(--ink)]"
       }`}
       style={{
-        background: highlight ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" : undefined,
+        background: highlight ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" : bgColor ?? undefined,
         boxShadow: "var(--shadow-card)",
       }}
     >

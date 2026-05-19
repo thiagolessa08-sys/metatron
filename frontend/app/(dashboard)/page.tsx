@@ -141,6 +141,10 @@ export default function HomePage() {
       }
     : null
 
+  const qualTotal = data
+    ? data.top_qualificacoes.slice(0, 6).reduce((s, q) => s + q.total, 0)
+    : 0
+
   const qualOption = data
     ? {
         tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b> ({d}%)" },
@@ -151,11 +155,40 @@ export default function HomePage() {
           type: "scroll",
           textStyle: { fontSize: 11 },
         },
+        graphic: [
+          {
+            type: "text",
+            left: "29%",
+            top: "center",
+            style: {
+              text: qualTotal.toLocaleString("pt-BR"),
+              textAlign: "center",
+              fill: "#111111",
+              fontSize: 20,
+              fontWeight: "bold",
+              fontFamily: "inherit",
+            },
+            silent: true,
+          },
+          {
+            type: "text",
+            left: "29%",
+            top: "57%",
+            style: {
+              text: "total",
+              textAlign: "center",
+              fill: "#9a9a9a",
+              fontSize: 11,
+              fontFamily: "inherit",
+            },
+            silent: true,
+          },
+        ],
         series: [
           {
             type: "pie",
-            radius: ["50%", "75%"],
-            center: ["32%", "50%"],
+            radius: ["46%", "74%"],
+            center: ["30%", "50%"],
             data: data.top_qualificacoes.slice(0, 6).map((q, i) => ({
               name: q.nome,
               value: q.total,
@@ -288,33 +321,47 @@ export default function HomePage() {
       {data && !isLoading && data.total_ligacoes > 0 && (
         <>
           {/* KPIs — linha 1 */}
-          <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <Kpi
-              highlight
-              label="Total de ligações"
-              value={data.total_ligacoes.toLocaleString("pt-BR")}
-              hint="No período selecionado"
-              icon={<Phone className="h-4 w-4" />}
-            />
-            <Kpi
-              label="Operadores"
-              value={data.operadores_unicos.toString()}
-              hint="Únicos no período"
-              icon={<Users className="h-4 w-4" />}
-            />
-            <Kpi
-              label="Campanhas"
-              value={data.campanhas_unicas.toString()}
-              hint="Únicas no período"
-              icon={<Megaphone className="h-4 w-4" />}
-            />
-            <Kpi
-              label="Duração média"
-              value={fmtSeg(data.duracao_media_s)}
-              hint={`Total: ${fmtSeg(data.duracao_total_s)}`}
-              icon={<Clock className="h-4 w-4" />}
-            />
-          </section>
+          {(() => {
+            const spark = data.volume_diario.map((d) => d.total)
+            const trend = calcTrend(spark)
+            return (
+              <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                <Kpi
+                  highlight
+                  label="Total de ligações"
+                  value={data.total_ligacoes.toLocaleString("pt-BR")}
+                  hint="No período selecionado"
+                  icon={<Phone className="h-4 w-4" />}
+                  sparklineData={spark}
+                  trend={trend}
+                />
+                <Kpi
+                  label="Operadores"
+                  value={data.operadores_unicos.toString()}
+                  hint="Únicos no período"
+                  icon={<Users className="h-4 w-4" />}
+                  sparklineData={spark}
+                  trend={trend}
+                />
+                <Kpi
+                  label="Campanhas"
+                  value={data.campanhas_unicas.toString()}
+                  hint="Únicas no período"
+                  icon={<Megaphone className="h-4 w-4" />}
+                  sparklineData={spark}
+                  trend={trend}
+                />
+                <Kpi
+                  label="Duração média"
+                  value={fmtSeg(data.duracao_media_s)}
+                  hint={`Total: ${fmtSeg(data.duracao_total_s)}`}
+                  icon={<Clock className="h-4 w-4" />}
+                  sparklineData={spark}
+                  trend={trend}
+                />
+              </section>
+            )
+          })()}
 
           {/* KPIs — linha 2 (destaques) */}
           <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -377,9 +424,9 @@ export default function HomePage() {
                 <p className="mt-0.5 text-xs text-[var(--muted-finexy)]">Top 6 no período</p>
               </div>
               {qualOption && data.top_qualificacoes.length > 0 ? (
-                <ReactECharts option={qualOption} style={{ height: 260 }} />
+                <ReactECharts option={qualOption} style={{ height: 290 }} />
               ) : (
-                <div className="grid h-[260px] place-items-center text-xs text-[var(--muted-finexy)]">
+                <div className="grid h-[290px] place-items-center text-xs text-[var(--muted-finexy)]">
                   Sem dados
                 </div>
               )}
@@ -452,6 +499,63 @@ export default function HomePage() {
   )
 }
 
+function calcTrend(vals: number[]): number | null {
+  if (vals.length < 4) return null
+  const half = Math.floor(vals.length / 2)
+  const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length
+  const first = avg(vals.slice(0, half))
+  const second = avg(vals.slice(half))
+  if (first === 0) return null
+  return Math.round(((second - first) / first) * 1000) / 10
+}
+
+function Sparkline({
+  data,
+  color,
+  height,
+  id,
+}: {
+  data: number[]
+  color: string
+  height: number
+  id: string
+}) {
+  if (data.length < 2) return null
+  const min = Math.min(...data)
+  const max = Math.max(...data)
+  const range = max - min || 1
+  const W = 100
+  const H = height
+  const pad = H * 0.1
+  const pts = data.map((v, i) => [
+    (i / (data.length - 1)) * W,
+    H - pad - ((v - min) / range) * (H - pad * 2),
+  ])
+  const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0]},${p[1]}`).join(" ")
+  const fillPath =
+    `M${pts[0][0]},${H} ` +
+    pts.map((p) => `L${p[0]},${p[1]}`).join(" ") +
+    ` L${pts[pts.length - 1][0]},${H} Z`
+  const gradId = `spk-${id}`
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      className="w-full"
+      style={{ height, display: "block" }}
+    >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={fillPath} fill={`url(#${gradId})`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function Kpi({
   label,
   value,
@@ -459,6 +563,8 @@ function Kpi({
   icon,
   highlight = false,
   valueSize = "default",
+  sparklineData,
+  trend,
 }: {
   label: string
   value: string
@@ -466,10 +572,16 @@ function Kpi({
   icon?: React.ReactNode
   highlight?: boolean
   valueSize?: "default" | "md"
+  sparklineData?: number[]
+  trend?: number | null
 }) {
+  const hasSparkline = sparklineData && sparklineData.length >= 2
+  const sparkColor = highlight ? "rgba(255,255,255,0.75)" : "#ff6a2c"
+  const safeId = label.replace(/\s+/g, "-").toLowerCase()
+
   return (
     <div
-      className={`relative overflow-hidden rounded-[22px] p-5 ${
+      className={`relative overflow-hidden rounded-[22px] ${hasSparkline ? "pt-5 px-5 pb-0" : "p-5"} ${
         highlight ? "text-white" : "bg-white text-[var(--ink)]"
       }`}
       style={{
@@ -489,7 +601,7 @@ function Kpi({
       <div className="relative flex items-center justify-between text-[13px] font-medium">
         <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>{label}</span>
         <span
-          className={`grid h-6 w-6 place-items-center rounded-full ${
+          className={`grid h-7 w-7 place-items-center rounded-full ${
             highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"
           }`}
         >
@@ -497,20 +609,40 @@ function Kpi({
         </span>
       </div>
       <p
-        className={`relative mt-3 truncate font-bold tracking-[-0.02em] ${
-          valueSize === "md" ? "text-[20px]" : "text-[28px]"
+        className={`relative mt-3 truncate font-bold tracking-[-0.03em] leading-none ${
+          valueSize === "md" ? "text-[22px]" : "text-[38px]"
         }`}
       >
         {value}
       </p>
       {hint && (
         <p
-          className={`relative mt-1 text-[11.5px] ${
+          className={`relative mt-1.5 text-[11.5px] ${
             highlight ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"
           }`}
         >
           {hint}
         </p>
+      )}
+      {hasSparkline && (
+        <div className="relative mt-3">
+          {trend !== undefined && trend !== null && (
+            <p
+              className={`mb-1.5 text-[11px] font-semibold ${
+                trend >= 0
+                  ? highlight
+                    ? "text-white/75"
+                    : "text-green-600"
+                  : highlight
+                  ? "text-white/55"
+                  : "text-red-500"
+              }`}
+            >
+              {trend >= 0 ? "▲" : "▼"} {Math.abs(trend)}% vs período anterior
+            </p>
+          )}
+          <Sparkline data={sparklineData} color={sparkColor} height={52} id={safeId} />
+        </div>
       )}
     </div>
   )

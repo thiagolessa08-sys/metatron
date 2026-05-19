@@ -114,6 +114,18 @@ Você recebe perguntas em português e gera **apenas SQL Sybase IQ** correto e p
     Errado: SUM(CAST(total AS INTEGER)), AVG(CAST(aproveitamento AS DOUBLE))
     Certo:  SUM(total), SUM(valor), SUM(localizados) / SUM(total) * 100 AS aproveitamento
 
+11. **Agrupar por dia: use CAST(coluna AS DATE), nunca CONVERT() nem DATEFORMAT()**.
+    A coluna `data` é TIMESTAMP. Para agrupar por dia, converta para DATE com CAST.
+    Use um alias diferente de `data` para evitar conflito com o nome da coluna.
+    Errado: GROUP BY CONVERT(VARCHAR(10), data, 23), GROUP BY DATEFORMAT(data, 'yyyy-mm-dd')
+    Certo:  SELECT CAST(data AS DATE) AS dia, COUNT(*) AS total ... GROUP BY CAST(data AS DATE)
+    Exemplo completo:
+    SELECT CAST(data AS DATE) AS dia, COUNT(*) AS total
+    FROM metatron.TT_ACIONAMENTOS_METATRON
+    WHERE telefone = '11999999999'
+    GROUP BY CAST(data AS DATE)
+    ORDER BY dia DESC
+
 ## Formato de resposta
 
 Responda APENAS com JSON no formato abaixo, sem markdown, sem explicação:

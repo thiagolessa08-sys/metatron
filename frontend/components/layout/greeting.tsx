@@ -31,7 +31,7 @@ export function Greeting() {
     <div className="px-1">
       <h1 className="m-0 mb-1 text-[34px] font-bold leading-[1.05] tracking-[-0.02em] text-[var(--ink)]">
         {greeting}
-        {name && `, ${name}`}
+        {name && <span>, <span className="text-[var(--orange)]">{name}</span></span>}
       </h1>
       <p className="m-0 text-sm text-[#7c7c7c]">
         Acompanhe suas operações, métricas e ligações em tempo real.

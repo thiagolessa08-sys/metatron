@@ -15,7 +15,7 @@ export interface Message {
   rows?: unknown[][]
   row_count?: number
   analysis?: string
-  chart_hint?: { type: "bar" | "line" | "pie" | "none"; x_column?: string; y_column?: string } | null
+  chart_hint?: { type?: "bar" | "line" | "pie" | "none"; x_column?: string; y_column?: string } | null
   error?: string | null
 }
 
@@ -27,12 +27,9 @@ type View = "chart" | "table" | "sql"
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user"
-  const hasChart =
-    !!message.chart_hint &&
-    message.chart_hint.type !== "none" &&
-    !!message.rows?.length
   const hasData = !!message.columns?.length && !!message.rows?.length
-  const [view, setView] = useState<View>(hasChart ? "chart" : "table")
+  const hasChart = hasData
+  const [view, setView] = useState<View>(hasData ? "chart" : "table")
 
   return (
     <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
@@ -101,7 +98,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               <ResultChart
                 columns={message.columns!}
                 rows={message.rows ?? []}
-                hint={message.chart_hint!}
+                hint={message.chart_hint ?? { type: "bar" }}
               />
             )}
             {view === "table" && (

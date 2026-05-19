@@ -3,7 +3,7 @@
 import ReactECharts from "echarts-for-react"
 
 interface ChartHint {
-  type: "bar" | "line" | "pie" | "none"
+  type?: "bar" | "line" | "pie" | "none"
   x_column?: string
   y_column?: string
 }
@@ -15,7 +15,8 @@ interface ResultChartProps {
 }
 
 export function ResultChart({ columns, rows, hint }: ResultChartProps) {
-  if (!rows.length || hint.type === "none") return null
+  const chartType = hint.type ?? "bar"
+  if (!rows.length || chartType === "none") return null
 
   const xIdx = hint.x_column ? columns.indexOf(hint.x_column) : 0
   const yIdx = hint.y_column ? columns.indexOf(hint.y_column) : 1
@@ -27,7 +28,7 @@ export function ResultChart({ columns, rows, hint }: ResultChartProps) {
 
   let option: Record<string, unknown>
 
-  if (hint.type === "pie") {
+  if (chartType === "pie") {
     option = {
       tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
       series: [
@@ -44,7 +45,7 @@ export function ResultChart({ columns, rows, hint }: ResultChartProps) {
       tooltip: { trigger: "axis" },
       xAxis: { type: "category", data: labels, axisLabel: { rotate: labels.length > 8 ? 30 : 0 } },
       yAxis: { type: "value" },
-      series: [{ type: hint.type === "line" ? "line" : "bar", data: values, smooth: hint.type === "line" }],
+      series: [{ type: chartType === "line" ? "line" : "bar", data: values, smooth: chartType === "line" }],
       grid: { left: "3%", right: "4%", bottom: "8%", containLabel: true },
     }
   }

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { SqlReveal } from "./sql-reveal"
 import { ResultTable } from "./result-table"
 import { ResultChart } from "./result-chart"
-import { AlertCircle, BarChart3, Bot, Table as TableIcon, User } from "lucide-react"
+import { AlertCircle, BarChart3, Bot, Code2, Table as TableIcon, User } from "lucide-react"
 
 export interface Message {
   role: "user" | "assistant"
@@ -23,7 +23,7 @@ interface ChatMessageProps {
   message: Message
 }
 
-type View = "chart" | "table"
+type View = "chart" | "table" | "sql"
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user"
@@ -72,34 +72,42 @@ export function ChatMessage({ message }: ChatMessageProps) {
               </p>
             )}
 
-            {hasChart && (
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              {hasChart && (
                 <ViewToggle
                   active={view === "chart"}
                   onClick={() => setView("chart")}
                   icon={<BarChart3 className="h-3.5 w-3.5" />}
                   label="Gráfico"
                 />
+              )}
+              <ViewToggle
+                active={view === "table"}
+                onClick={() => setView("table")}
+                icon={<TableIcon className="h-3.5 w-3.5" />}
+                label="Tabela"
+              />
+              {message.sql && (
                 <ViewToggle
-                  active={view === "table"}
-                  onClick={() => setView("table")}
-                  icon={<TableIcon className="h-3.5 w-3.5" />}
-                  label="Tabela"
+                  active={view === "sql"}
+                  onClick={() => setView("sql")}
+                  icon={<Code2 className="h-3.5 w-3.5" />}
+                  label="SQL"
                 />
-              </div>
-            )}
+              )}
+            </div>
 
-            {hasChart && view === "chart" ? (
+            {view === "chart" && hasChart && (
               <ResultChart
                 columns={message.columns!}
                 rows={message.rows ?? []}
                 hint={message.chart_hint!}
               />
-            ) : (
+            )}
+            {view === "table" && (
               <ResultTable columns={message.columns!} rows={message.rows ?? []} />
             )}
-
-            {message.sql && <SqlReveal sql={message.sql} />}
+            {view === "sql" && message.sql && <SqlReveal sql={message.sql} />}
           </div>
         )}
 

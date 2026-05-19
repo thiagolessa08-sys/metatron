@@ -184,12 +184,12 @@ export default function HomePage() {
           {
             type: "text",
             left: "28%",
-            top: "47%",
+            top: "46%",
             style: {
               text: qualTotalFmt,
               textAlign: "center",
               fill: "#111111",
-              fontSize: 34,
+              fontSize: 44,
               fontWeight: "bold",
               fontFamily: "inherit",
             },

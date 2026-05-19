@@ -145,6 +145,12 @@ export default function HomePage() {
     ? data.top_qualificacoes.slice(0, 6).reduce((s, q) => s + q.total, 0)
     : 0
 
+  const qualTotalFmt = qualTotal >= 1_000_000
+    ? `${(qualTotal / 1_000_000).toFixed(1).replace(".", ",")}M`
+    : qualTotal >= 1_000
+    ? `${(qualTotal / 1_000).toFixed(1).replace(".", ",")}k`
+    : qualTotal.toString()
+
   const qualOption = data
     ? {
         tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b> ({d}%)" },
@@ -154,31 +160,37 @@ export default function HomePage() {
           top: "center",
           type: "scroll",
           textStyle: { fontSize: 11 },
+          formatter: (name: string) => {
+            const item = data.top_qualificacoes.find((q) => q.nome === name)
+            if (!item || qualTotal === 0) return name
+            const pct = ((item.total / qualTotal) * 100).toFixed(1)
+            return `${name}   ${pct}%`
+          },
         },
         graphic: [
           {
             type: "text",
-            left: "29%",
-            top: "center",
+            left: "28%",
+            top: "40%",
             style: {
-              text: qualTotal.toLocaleString("pt-BR"),
+              text: "Total",
               textAlign: "center",
-              fill: "#111111",
-              fontSize: 20,
-              fontWeight: "bold",
+              fill: "#9a9a9a",
+              fontSize: 13,
               fontFamily: "inherit",
             },
             silent: true,
           },
           {
             type: "text",
-            left: "29%",
-            top: "57%",
+            left: "28%",
+            top: "47%",
             style: {
-              text: "total",
+              text: qualTotalFmt,
               textAlign: "center",
-              fill: "#9a9a9a",
-              fontSize: 11,
+              fill: "#111111",
+              fontSize: 34,
+              fontWeight: "bold",
               fontFamily: "inherit",
             },
             silent: true,
@@ -187,8 +199,8 @@ export default function HomePage() {
         series: [
           {
             type: "pie",
-            radius: ["46%", "74%"],
-            center: ["30%", "50%"],
+            radius: ["42%", "72%"],
+            center: ["29%", "50%"],
             data: data.top_qualificacoes.slice(0, 6).map((q, i) => ({
               name: q.nome,
               value: q.total,
@@ -424,9 +436,9 @@ export default function HomePage() {
                 <p className="mt-0.5 text-xs text-[var(--muted-finexy)]">Top 6 no período</p>
               </div>
               {qualOption && data.top_qualificacoes.length > 0 ? (
-                <ReactECharts option={qualOption} style={{ height: 290 }} />
+                <ReactECharts option={qualOption} style={{ height: 320 }} />
               ) : (
-                <div className="grid h-[290px] place-items-center text-xs text-[var(--muted-finexy)]">
+                <div className="grid h-[320px] place-items-center text-xs text-[var(--muted-finexy)]">
                   Sem dados
                 </div>
               )}

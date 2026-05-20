@@ -17,7 +17,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <div className="flex items-center justify-between gap-[18px] px-1 py-0.5">
-      <div className="flex shrink-0 items-center gap-3.5">
+      <div className="flex shrink-0 items-center gap-3.5 -ml-2">
         <button
           type="button"
           onClick={onMenuClick}
@@ -30,8 +30,8 @@ export function Header({ onMenuClick }: HeaderProps) {
         <Image
           src="/Logo.png"
           alt="Joytec"
-          width={110}
-          height={36}
+          width={140}
+          height={46}
           className="object-contain"
           priority
         />

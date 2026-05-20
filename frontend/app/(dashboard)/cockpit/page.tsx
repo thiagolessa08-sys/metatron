@@ -112,7 +112,7 @@ export default function CockpitPage() {
           left: "center",
           bottom: 5,
           textStyle: { fontSize: 10 },
-          inRange: { color: ["#fff5ec", "#ffd9c2", "#ff7a3d", "#ff5a18"] },
+          inRange: { color: ["#E0F5FC", "#C5EBF7", "#4DC3E8", "#28ACDB"] },
         },
         series: [
           {
@@ -146,9 +146,9 @@ export default function CockpitPage() {
             type: "line",
             smooth: true,
             data: data.volume_diario.map((d) => d.total),
-            itemStyle: { color: "#ff6a2c" },
+            itemStyle: { color: "#4DC3E8" },
             lineStyle: { width: 2.5 },
-            areaStyle: { color: "rgba(255,106,44,0.12)" },
+            areaStyle: { color: "rgba(77,195,232,0.12)" },
             symbol: "circle",
             symbolSize: 6,
           },
@@ -167,7 +167,7 @@ export default function CockpitPage() {
             type: "bar",
             data: data.por_turno.map((t) => t.total),
             itemStyle: {
-              color: "#ff6a2c",
+              color: "#4DC3E8",
               borderRadius: [0, 8, 8, 0],
             },
             label: {
@@ -197,7 +197,7 @@ export default function CockpitPage() {
             data: data.por_dia_semana.map((d, i) => ({
               value: d.total,
               itemStyle: {
-                color: i >= 5 ? "#a8a8a8" : "#ff6a2c",
+                color: i >= 5 ? "#a8a8a8" : "#4DC3E8",
                 borderRadius: [8, 8, 0, 0],
               },
             })),
@@ -398,7 +398,7 @@ export default function CockpitPage() {
                   }`}
                   style={
                     i === 0
-                      ? { background: "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" }
+                      ? { background: "linear-gradient(180deg, #4DC3E8 0%, #28ACDB 100%)" }
                       : { boxShadow: "var(--shadow-card)" }
                   }
                 >
@@ -414,16 +414,16 @@ export default function CockpitPage() {
                   )}
                   <div className="relative flex items-center gap-2 text-[13px] font-medium">
                     <Calendar
-                      className={`h-4 w-4 ${i === 0 ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}`}
+                      className={`h-4 w-4 ${i === 0 ? "text-[#D0F0FA]" : "text-[var(--muted-finexy)]"}`}
                     />
-                    <span className={i === 0 ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>
+                    <span className={i === 0 ? "text-[#D0F0FA]" : "text-[var(--muted-finexy)]"}>
                       {i === 0 ? "Melhor combinação" : `Pico #${i + 1}`}
                     </span>
                   </div>
                   <p className="relative mt-3 text-[22px] font-bold tracking-[-0.01em]">{p.label}</p>
                   <p
                     className={`relative mt-1 text-[12px] ${
-                      i === 0 ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"
+                      i === 0 ? "text-[#C5EBF7]" : "text-[var(--muted-finexy)]"
                     }`}
                   >
                     {p.valor.toLocaleString("pt-BR")} ligações
@@ -457,7 +457,7 @@ function Kpi({
         highlight ? "text-white" : "bg-white text-[var(--ink)]"
       }`}
       style={{
-        background: highlight ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" : undefined,
+        background: highlight ? "linear-gradient(180deg, #4DC3E8 0%, #28ACDB 100%)" : undefined,
         boxShadow: "var(--shadow-card)",
       }}
     >
@@ -471,7 +471,7 @@ function Kpi({
         />
       )}
       <div className="relative flex items-center justify-between text-[12px] font-medium">
-        <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>{label}</span>
+        <span className={highlight ? "text-[#D0F0FA]" : "text-[var(--muted-finexy)]"}>{label}</span>
         <span
           className={`grid h-5 w-5 place-items-center rounded-full ${
             highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"
@@ -484,7 +484,7 @@ function Kpi({
       {hint && (
         <p
           className={`relative mt-0.5 text-[10.5px] ${
-            highlight ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"
+            highlight ? "text-[#C5EBF7]" : "text-[var(--muted-finexy)]"
           }`}
         >
           {hint}

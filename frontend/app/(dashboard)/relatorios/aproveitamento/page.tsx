@@ -84,8 +84,8 @@ export default function AproveitamentoPage() {
             itemStyle: { borderColor: "#fff", borderWidth: 2 },
             data: [
               { value: t.total, name: "Total", itemStyle: { color: "#111" } },
-              { value: t.contatados, name: "Contatados", itemStyle: { color: "#ff7a3d" } },
-              { value: t.localizados, name: "Localizados", itemStyle: { color: "#ff5a18" } },
+              { value: t.contatados, name: "Contatados", itemStyle: { color: "#4DC3E8" } },
+              { value: t.localizados, name: "Localizados", itemStyle: { color: "#28ACDB" } },
             ],
           },
         ],
@@ -200,7 +200,7 @@ export default function AproveitamentoPage() {
                   i.aproveitamento >= efMedia && i.discados_total >= volumeMedio
                     ? "#16a34a" // champions
                     : i.aproveitamento >= efMedia
-                      ? "#ff6a2c" // alta efic, baixo volume
+                      ? "#4DC3E8" // alta efic, baixo volume
                       : i.discados_total >= volumeMedio
                         ? "#f4a51b" // alto volume, baixa efic (revisar)
                         : "#a8a8a8", // resto
@@ -524,7 +524,7 @@ function Kpi({
         highlight ? "text-white" : "bg-white text-[var(--ink)]"
       }`}
       style={{
-        background: highlight ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" : undefined,
+        background: highlight ? "linear-gradient(180deg, #4DC3E8 0%, #28ACDB 100%)" : undefined,
         boxShadow: "var(--shadow-card)",
       }}
     >
@@ -538,7 +538,7 @@ function Kpi({
         />
       )}
       <div className="relative flex items-center justify-between text-[12px] font-medium">
-        <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>{label}</span>
+        <span className={highlight ? "text-[#D0F0FA]" : "text-[var(--muted-finexy)]"}>{label}</span>
         <span
           className={`grid h-5 w-5 place-items-center rounded-full ${
             highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"
@@ -559,7 +559,7 @@ function Kpi({
       {hint && (
         <p
           className={`relative mt-0.5 text-[11px] ${
-            highlight ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"
+            highlight ? "text-[#C5EBF7]" : "text-[var(--muted-finexy)]"
           }`}
         >
           {hint}

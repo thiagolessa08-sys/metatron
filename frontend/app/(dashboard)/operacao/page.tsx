@@ -245,7 +245,7 @@ function Kpi({
     <div
       className={`relative overflow-hidden rounded-[22px] p-5 ${highlight ? "text-white" : "bg-white text-[var(--ink)]"}`}
       style={{
-        background: highlight ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" : undefined,
+        background: highlight ? "linear-gradient(180deg, #4DC3E8 0%, #28ACDB 100%)" : undefined,
         boxShadow: "var(--shadow-card)",
       }}
     >
@@ -257,7 +257,7 @@ function Kpi({
         />
       )}
       <div className="relative flex items-center justify-between text-[13px] font-medium">
-        <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>{label}</span>
+        <span className={highlight ? "text-[#D0F0FA]" : "text-[var(--muted-finexy)]"}>{label}</span>
         <span className={`grid h-6 w-6 place-items-center rounded-full ${highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"}`}>
           {icon}
         </span>
@@ -266,7 +266,7 @@ function Kpi({
         {value === null ? <Skeleton className="h-9 w-24" /> : value}
       </p>
       {hint && (
-        <p className={`relative mt-1 text-[11.5px] ${highlight ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"}`}>
+        <p className={`relative mt-1 text-[11.5px] ${highlight ? "text-[#C5EBF7]" : "text-[var(--muted-finexy)]"}`}>
           {hint}
         </p>
       )}

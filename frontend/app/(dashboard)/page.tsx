@@ -57,7 +57,7 @@ interface DashboardResult {
 }
 
 const PALETA = [
-  "#ff6a2c",
+  "#4DC3E8",
   "#111111",
   "#f4a51b",
   "#16a34a",
@@ -131,9 +131,9 @@ export default function HomePage() {
             type: "line",
             smooth: true,
             data: data.volume_diario.map((d) => d.total),
-            itemStyle: { color: "#ff6a2c" },
+            itemStyle: { color: "#4DC3E8" },
             lineStyle: { width: 2.5 },
-            areaStyle: { color: "rgba(255,106,44,0.12)" },
+            areaStyle: { color: "rgba(77,195,232,0.12)" },
             symbol: "circle",
             symbolSize: 5,
           },
@@ -230,7 +230,7 @@ export default function HomePage() {
           {
             type: "bar",
             data: data.top_campanhas.slice(0, 5).map((c) => c.total).reverse(),
-            itemStyle: { color: "#ff6a2c", borderRadius: [0, 8, 8, 0] },
+            itemStyle: { color: "#4DC3E8", borderRadius: [0, 8, 8, 0] },
             barMaxWidth: 22,
             label: {
               show: true,
@@ -591,7 +591,7 @@ function Kpi({
   bgColor?: string
 }) {
   const hasSparkline = sparklineData && sparklineData.length >= 2
-  const sparkColor = highlight ? "rgba(255,255,255,0.6)" : "#ffb08a"
+  const sparkColor = highlight ? "rgba(255,255,255,0.6)" : "#9ADCEF"
   const safeId = label.replace(/\s+/g, "-").toLowerCase()
 
   return (
@@ -600,7 +600,7 @@ function Kpi({
         highlight ? "text-white" : "bg-white text-[var(--ink)]"
       }`}
       style={{
-        background: highlight ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" : bgColor ?? undefined,
+        background: highlight ? "linear-gradient(180deg, #4DC3E8 0%, #28ACDB 100%)" : bgColor ?? undefined,
         boxShadow: "var(--shadow-card)",
       }}
     >
@@ -614,7 +614,7 @@ function Kpi({
         />
       )}
       <div className="relative flex items-center justify-between text-[13px] font-medium">
-        <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>{label}</span>
+        <span className={highlight ? "text-[#D0F0FA]" : "text-[var(--muted-finexy)]"}>{label}</span>
         <span
           className={`grid h-7 w-7 place-items-center rounded-full ${
             highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"
@@ -633,7 +633,7 @@ function Kpi({
       {hint && (
         <p
           className={`relative mt-1.5 text-[11.5px] ${
-            highlight ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"
+            highlight ? "text-[#C5EBF7]" : "text-[var(--muted-finexy)]"
           }`}
         >
           {hint}

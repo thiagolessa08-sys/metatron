@@ -29,7 +29,7 @@ interface HeatmapResult {
 }
 
 const PALETA = [
-  "#ff6a2c",
+  "#4DC3E8",
   "#111111",
   "#f4a51b",
   "#16a34a",
@@ -183,7 +183,7 @@ export default function QualificacoesPage() {
           left: "center",
           bottom: 5,
           textStyle: { fontSize: 10 },
-          inRange: { color: ["#fff5ec", "#ffd9c2", "#ff7a3d", "#ff5a18"] },
+          inRange: { color: ["#E0F5FC", "#C5EBF7", "#4DC3E8", "#28ACDB"] },
         },
         series: [
           {
@@ -384,7 +384,7 @@ function Kpi({
         highlight ? "text-white" : "bg-white text-[var(--ink)]"
       }`}
       style={{
-        background: highlight ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" : undefined,
+        background: highlight ? "linear-gradient(180deg, #4DC3E8 0%, #28ACDB 100%)" : undefined,
         boxShadow: "var(--shadow-card)",
       }}
     >
@@ -398,7 +398,7 @@ function Kpi({
         />
       )}
       <div className="relative flex items-center justify-between text-[12px] font-medium">
-        <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>{label}</span>
+        <span className={highlight ? "text-[#D0F0FA]" : "text-[var(--muted-finexy)]"}>{label}</span>
         <span
           className={`grid h-5 w-5 place-items-center rounded-full ${
             highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"
@@ -419,7 +419,7 @@ function Kpi({
       {hint && (
         <p
           className={`relative mt-0.5 text-[11px] ${
-            highlight ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"
+            highlight ? "text-[#C5EBF7]" : "text-[var(--muted-finexy)]"
           }`}
         >
           {hint}

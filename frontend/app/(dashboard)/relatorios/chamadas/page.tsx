@@ -55,7 +55,7 @@ interface ChamadasResumo {
   por_operadora: OperadoraBucket[]
 }
 
-const PALETA = ["#ff6a2c", "#111111", "#f4a51b", "#16a34a", "#8a8a8a", "#3a8df0", "#e23b3b", "#ff9966"]
+const PALETA = ["#4DC3E8", "#111111", "#f4a51b", "#16a34a", "#8a8a8a", "#3a8df0", "#e23b3b", "#ff9966"]
 
 function fmtSeg(s: number): string {
   if (!s) return "—"
@@ -152,7 +152,7 @@ export default function ChamadasPage() {
           {
             type: "bar",
             data: resumo.por_hora.map((h) => h.total),
-            itemStyle: { color: "#ff6a2c", borderRadius: [6, 6, 0, 0] },
+            itemStyle: { color: "#4DC3E8", borderRadius: [6, 6, 0, 0] },
             barMaxWidth: 16,
           },
         ],
@@ -440,7 +440,7 @@ function Kpi({
         highlight ? "text-white" : "bg-white text-[var(--ink)]"
       }`}
       style={{
-        background: highlight ? "linear-gradient(180deg, #ff7a3d 0%, #ff5a18 100%)" : undefined,
+        background: highlight ? "linear-gradient(180deg, #4DC3E8 0%, #28ACDB 100%)" : undefined,
         boxShadow: "var(--shadow-card)",
       }}
     >
@@ -454,7 +454,7 @@ function Kpi({
         />
       )}
       <div className="relative flex items-center justify-between text-[12px] font-medium">
-        <span className={highlight ? "text-[#ffe7d8]" : "text-[var(--muted-finexy)]"}>{label}</span>
+        <span className={highlight ? "text-[#D0F0FA]" : "text-[var(--muted-finexy)]"}>{label}</span>
         <span
           className={`grid h-5 w-5 place-items-center rounded-full ${
             highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"
@@ -473,7 +473,7 @@ function Kpi({
       {hint && (
         <p
           className={`relative mt-0.5 text-[11px] ${
-            highlight ? "text-[#ffd9c2]" : "text-[var(--muted-finexy)]"
+            highlight ? "text-[#C5EBF7]" : "text-[var(--muted-finexy)]"
           }`}
         >
           {hint}

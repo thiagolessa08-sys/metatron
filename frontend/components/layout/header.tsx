@@ -1,6 +1,7 @@
 "use client"
 
 import { Bell, Info, Menu, Search, Megaphone, UserRound } from "lucide-react"
+import Image from "next/image"
 import { ProfilePill } from "@/components/layout/profile-pill"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { PeriodFilter } from "@/components/filters/period-filter"
@@ -26,9 +27,14 @@ export function Header({ onMenuClick }: HeaderProps) {
         >
           <Menu className="h-[18px] w-[18px]" />
         </button>
-        <div className="text-[20px] font-extrabold tracking-[-0.01em] text-[var(--ink)]">
-          Metatron
-        </div>
+        <Image
+          src="/Logo Box - Monocromático Gradiente Laranja.jpg"
+          alt="Joytec"
+          width={110}
+          height={36}
+          className="object-contain"
+          priority
+        />
       </div>
 
       <div className="hidden flex-1 items-center justify-center gap-2 md:flex">

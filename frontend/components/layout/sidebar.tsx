@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
@@ -63,12 +64,18 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       <Link
         href="/"
         onClick={onClose}
-        className="grid h-11 w-11 place-items-center rounded-[14px] text-white"
-        style={{ background: "var(--orange)", boxShadow: "var(--shadow-logo)" }}
-        title="Metatron"
-        aria-label="Metatron — Dashboard"
+        className="grid h-11 w-11 place-items-center overflow-hidden rounded-[14px]"
+        title="Joytec"
+        aria-label="Joytec — Dashboard"
       >
-        <Activity className="h-[22px] w-[22px]" strokeWidth={2.4} />
+        <Image
+          src="/Logo Box - Monocromático Gradiente Laranja.jpg"
+          alt="Joytec"
+          width={44}
+          height={44}
+          className="h-11 w-11 object-cover"
+          priority
+        />
       </Link>
 
       <nav

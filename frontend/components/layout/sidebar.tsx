@@ -64,18 +64,12 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       <Link
         href="/"
         onClick={onClose}
-        className="grid h-11 w-11 place-items-center overflow-hidden rounded-[14px]"
+        className="grid h-11 w-11 place-items-center rounded-[14px] text-white"
+        style={{ background: "var(--orange)", boxShadow: "var(--shadow-logo)" }}
         title="Joytec"
         aria-label="Joytec — Dashboard"
       >
-        <Image
-          src="/Logo.png"
-          alt="Joytec"
-          width={44}
-          height={44}
-          className="h-11 w-11 object-contain"
-          priority
-        />
+        <Activity className="h-[22px] w-[22px]" strokeWidth={2.4} />
       </Link>
 
       <nav

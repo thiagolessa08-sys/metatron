@@ -61,17 +61,6 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
   return (
     <>
-      <Link
-        href="/"
-        onClick={onClose}
-        className="grid h-11 w-11 place-items-center rounded-[14px] text-white"
-        style={{ background: "var(--orange)", boxShadow: "var(--shadow-logo)" }}
-        title="Joytec"
-        aria-label="Joytec — Dashboard"
-      >
-        <Activity className="h-[22px] w-[22px]" strokeWidth={2.4} />
-      </Link>
-
       <nav
         className="mt-1.5 flex flex-col items-center gap-1 rounded-[36px] bg-white px-1.5 py-2.5"
         style={{ boxShadow: "var(--shadow-card)" }}

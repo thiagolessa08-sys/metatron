@@ -69,11 +69,11 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         aria-label="Joytec — Dashboard"
       >
         <Image
-          src="/Logo Box - Monocromático Gradiente Laranja.jpg"
+          src="/Logo.png"
           alt="Joytec"
           width={44}
           height={44}
-          className="h-11 w-11 object-cover"
+          className="h-11 w-11 object-contain"
           priority
         />
       </Link>

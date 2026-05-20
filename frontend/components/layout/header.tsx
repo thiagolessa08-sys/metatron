@@ -28,7 +28,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           <Menu className="h-[18px] w-[18px]" />
         </button>
         <Image
-          src="/Logo Box - Monocromático Gradiente Laranja.jpg"
+          src="/Logo.png"
           alt="Joytec"
           width={110}
           height={36}

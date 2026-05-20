@@ -62,7 +62,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   return (
     <>
       <nav
-        className="mt-1.5 flex flex-col items-center gap-1 rounded-[36px] bg-white px-1.5 py-2.5"
+        className="mt-[172px] flex flex-col items-center gap-1 rounded-[36px] bg-white px-1.5 py-2.5"
         style={{ boxShadow: "var(--shadow-card)" }}
         aria-label="Navegação principal"
       >

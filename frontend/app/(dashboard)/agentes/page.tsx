@@ -212,11 +212,11 @@ function AgentesContent() {
     <div className="space-y-6">
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="text-white" style={{ background: "linear-gradient(180deg, #4DC3E8 0%, #28ACDB 100%)" }}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Operadores</CardTitle>
+            <CardTitle className="text-xs" style={{ color: "rgba(255,255,255,0.75)" }}>Operadores</CardTitle>
           </CardHeader>
-          <CardContent><p className="text-3xl font-bold">{data.items.length}</p></CardContent>
+          <CardContent><p className="text-3xl font-bold text-white">{data.items.length}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">

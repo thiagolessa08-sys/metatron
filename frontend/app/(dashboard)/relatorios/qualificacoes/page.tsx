@@ -51,12 +51,13 @@ function classify(item: QualItem): "conversao" | "descarte" | "outro" {
 }
 
 export default function QualificacoesPage() {
-  const { period, campanha, operador } = useFilters()
+  const { period, campanha, operador, empresa } = useFilters()
   const body = {
     data_inicio: period.dataInicio,
     data_fim: period.dataFim,
     campanha: campanha ?? undefined,
     operador: operador ?? undefined,
+    empresa: empresa ?? undefined,
   }
 
   const { data, isLoading, isError } = useQuery<QualResult>({

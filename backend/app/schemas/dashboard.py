@@ -12,6 +12,7 @@ class DashboardQuery(BaseModel):
     data_fim: str = Field(..., description="yyyy-MM-dd")
     campanha: str | None = None
     operador: str | None = None
+    empresa: str | None = None
 
 
 class VolumeDiarioPonto(BaseModel):

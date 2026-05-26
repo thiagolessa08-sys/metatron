@@ -62,6 +62,7 @@ async def dashboard_executive(
     campanha: str | None = None,
     operador: str | None = None,
     operador_forced: str | None = None,
+    empresa: str | None = None,
 ) -> DashboardResult:
     agent = SybaseAgentClient()
 
@@ -73,6 +74,9 @@ async def dashboard_executive(
     if campanha:
         safe_c = campanha.replace("'", "''")
         where_extra += f" AND campanha = '{safe_c}'"
+    if empresa:
+        safe_e = empresa.replace("'", "''")
+        where_extra += f" AND empresa = '{safe_e}'"
 
     period_where = (
         f"WHERE data BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra}"

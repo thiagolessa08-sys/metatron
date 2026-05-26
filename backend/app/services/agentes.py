@@ -14,6 +14,8 @@ def _where(q: AgentesQuery) -> str:
         parts.append(f"campanha = '{_safe(q.campanha)}'")
     if q.operador:
         parts.append(f"operador = '{_safe(q.operador)}'")
+    if q.empresa:
+        parts.append(f"empresa = '{_safe(q.empresa)}'")
     return " AND ".join(parts)
 
 

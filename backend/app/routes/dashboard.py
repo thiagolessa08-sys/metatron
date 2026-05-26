@@ -29,4 +29,5 @@ async def executive(
         campanha=body.campanha,
         operador=body.operador,
         operador_forced=operador_forced,
+        empresa=body.empresa,
     )

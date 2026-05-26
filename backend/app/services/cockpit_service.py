@@ -47,6 +47,7 @@ async def cockpit_heatmap(
     campanha: str | None = None,
     operador: str | None = None,
     operador_forced: str | None = None,
+    empresa: str | None = None,
 ) -> CockpitResult:
     """
     operador_forced: filtro de role (consultor vê só os próprios dados).
@@ -62,6 +63,9 @@ async def cockpit_heatmap(
     if campanha:
         safe_c = campanha.replace("'", "''")
         where_extra += f" AND campanha = '{safe_c}'"
+    if empresa:
+        safe_e = empresa.replace("'", "''")
+        where_extra += f" AND empresa = '{safe_e}'"
 
     # Query única: data + hora → COUNT
     # DATEPART(hour, hora) agrupa por hora inteira — hora é TIME com precisão de segundos

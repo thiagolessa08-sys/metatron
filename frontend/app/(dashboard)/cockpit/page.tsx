@@ -76,12 +76,13 @@ function formatDate(iso: string | null): string {
 }
 
 export default function CockpitPage() {
-  const { period, campanha, operador } = useFilters()
+  const { period, campanha, operador, empresa } = useFilters()
   const body = {
     data_inicio: period.dataInicio,
     data_fim: period.dataFim,
     campanha,
     operador,
+    empresa: empresa ?? undefined,
   }
 
   const { data, isLoading, isError } = useQuery<CockpitResult>({

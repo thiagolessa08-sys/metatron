@@ -6,6 +6,7 @@ class AgentesQuery(BaseModel):
     data_fim: str
     campanha: str | None = None
     operador: str | None = None
+    empresa: str | None = None
 
 
 class AgenteMetrica(BaseModel):

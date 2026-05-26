@@ -6,6 +6,7 @@ class CockpitQuery(BaseModel):
     data_fim: str = Field(..., description="yyyy-MM-dd")
     campanha: str | None = None
     operador: str | None = None
+    empresa: str | None = None
 
 
 class HeatmapCell(BaseModel):

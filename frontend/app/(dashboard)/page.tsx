@@ -78,12 +78,13 @@ function fmtSeg(s: number): string {
 }
 
 export default function HomePage() {
-  const { period, campanha, operador, setPeriod } = useFilters()
+  const { period, campanha, operador, empresa, setPeriod } = useFilters()
   const body = {
     data_inicio: period.dataInicio,
     data_fim: period.dataFim,
     campanha: campanha ?? undefined,
     operador: operador ?? undefined,
+    empresa: empresa ?? undefined,
   }
 
   const { data, isLoading } = useQuery<DashboardResult>({

@@ -34,6 +34,8 @@ async def get_qualificacoes(q: QualificacoesQuery) -> QualificacoesResult:
         sql += f" AND campanha = '{safe(q.campanha)}'"
     if q.operador:
         sql += f" AND operador = '{safe(q.operador)}'"
+    if q.empresa:
+        sql += f" AND empresa = '{safe(q.empresa)}'"
     sql += " GROUP BY descricao ORDER BY quantidade DESC"
 
     r = await agent.query(sql, limit=500)

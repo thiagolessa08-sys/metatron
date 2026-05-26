@@ -24,6 +24,9 @@ def _build_where(q: QualificacoesQuery, operador_forced: str | None) -> str:
     if q.campanha:
         safe_c = q.campanha.replace("'", "''")
         extra += f" AND campanha = '{safe_c}'"
+    if q.empresa:
+        safe_e = q.empresa.replace("'", "''")
+        extra += f" AND empresa = '{safe_e}'"
     return f"WHERE data BETWEEN '{q.data_inicio}' AND '{q.data_fim}'{extra}"
 
 

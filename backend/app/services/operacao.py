@@ -19,7 +19,7 @@ async def _count_for_date(agent: SybaseAgentClient, data: str) -> int:
     try:
         r = await agent.query(
             f"SELECT COUNT(*) FROM {_TABLE} "
-            f"WHERE data >= '{data}' AND data < '{data} 23:59:59'"
+            f"WHERE CAST(data AS DATE) = '{data}'"
         )
         return int((r.get("rows") or [[0]])[0][0] or 0)
     except Exception as e:
@@ -63,7 +63,7 @@ async def get_snapshot() -> OperacaoSnapshot:
             r_agentes = await agent.query(
                 f"SELECT operador, COUNT(*) AS total, AVG(duracao) AS dur_media, MAX(hora) AS ultima "
                 f"FROM {_TABLE} "
-                f"WHERE data >= '{data_alvo}' AND data < '{data_alvo} 23:59:59' AND operador IS NOT NULL "
+                f"WHERE CAST(data AS DATE) = '{data_alvo}' AND operador IS NOT NULL "
                 f"GROUP BY operador ORDER BY total DESC",
                 limit=200,
             )

@@ -13,9 +13,9 @@ async def get_chamadas(q: ChamadasQuery) -> ChamadasResult:
 
     parts = []
     if q.data_inicio:
-        parts.append(f"datahora >= '{_safe(q.data_inicio)}'")
+        parts.append(f"data_hora >= '{_safe(q.data_inicio)}'")
     if q.data_fim:
-        parts.append(f"datahora <= '{_safe(q.data_fim)} 23:59:59'")
+        parts.append(f"data_hora <= '{_safe(q.data_fim)} 23:59:59'")
     if q.resultado:
         parts.append(f"resultado = '{_safe(q.resultado)}'")
     if q.operadora:
@@ -24,8 +24,8 @@ async def get_chamadas(q: ChamadasQuery) -> ChamadasResult:
     where = f"WHERE {' AND '.join(parts)}" if parts else ""
 
     sql = (
-        f"SELECT TOP 1000 datahora, numero, Operadora, resultado, duracao, Dur_Min, Valor "
-        f"FROM {_TABLE} {where} ORDER BY datahora DESC"
+        f"SELECT TOP 1000 data_hora, numero, Operadora, resultado, duracao, Dur_Min, Valor "
+        f"FROM {_TABLE} {where} ORDER BY data_hora DESC"
     )
 
     r = await agent.query(sql, limit=1000)
@@ -33,7 +33,7 @@ async def get_chamadas(q: ChamadasQuery) -> ChamadasResult:
 
     items = [
         ChamadaItem(
-            datahora=str(row[0]).strip() if row[0] else "",
+            data_hora=str(row[0]).strip() if row[0] else "",
             numero=str(row[1]).strip() if row[1] else "",
             operadora=str(row[2]).strip() if row[2] else "",
             resultado=str(row[3]).strip() if row[3] else "",

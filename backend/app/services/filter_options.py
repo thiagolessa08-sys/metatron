@@ -28,8 +28,9 @@ async def get_filter_options() -> FilterOptions:
     campanhas = await distinct("campanha")
     operadores = await distinct("operador")
     qualificacoes = await distinct("descricao")
+    empresas = await distinct("empresa")
 
-    options = FilterOptions(campanhas=campanhas, operadores=operadores, qualificacoes=qualificacoes)
+    options = FilterOptions(campanhas=campanhas, operadores=operadores, qualificacoes=qualificacoes, empresas=empresas)
     _cache["options"] = options
     _cache["ts"] = now
     return options

@@ -10,3 +10,4 @@ class FilterOptions(BaseModel):
     campanhas: list[FilterItem]
     operadores: list[FilterItem]
     qualificacoes: list[FilterItem]
+    empresas: list[FilterItem]

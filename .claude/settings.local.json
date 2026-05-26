@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:metatron-production.up.railway.app)",
+      "Bash(curl -s -X POST \"https://metatron-production.up.railway.app/api/auth/login\" -H \"Content-Type: application/json\" -d '{\"email\": \"admin@joytec.com\", \"password\": \"admin123\"}')",
+      "Bash(curl -s -X POST https://metatron-production.up.railway.app/api/sql/execute -H 'Content-Type: application/json' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0YzE4ZjNiNS0zMTBlLTRkZWItOWNmNy0xODg3ZTFmYzhiYjQiLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3Nzk4MjUzMTksInR5cGUiOiJhY2Nlc3MifQ.3hFdkp50jQdSS6BUVDlzI5nKzjRmnPZUzozs7wjMCcA' -d '{\"sql\": \"SELECT TOP 1 * FROM metatron.TT_METRICAS_METATRON\"}')",
+      "Bash(curl -s -X POST https://metatron-production.up.railway.app/api/sql/execute -H 'Content-Type: application/json' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0YzE4ZjNiNS0zMTBlLTRkZWItOWNmNy0xODg3ZTFmYzhiYjQiLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3Nzk4MjUzMTksInR5cGUiOiJhY2Nlc3MifQ.3hFdkp50jQdSS6BUVDlzI5nKzjRmnPZUzozs7wjMCcA' -d '{\"sql\": \"SELECT TOP 1 * FROM metatron.TT_RELATORIO_METATRON\"}')"
+    ]
+  }
+}

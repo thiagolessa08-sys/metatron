@@ -33,6 +33,8 @@ interface FiltersContextValue {
   setCampanha: (value: string | null) => void
   operador: string | null
   setOperador: (value: string | null) => void
+  empresa: string | null
+  setEmpresa: (value: string | null) => void
   // Per-page filter slot
   pageFilters: ReactNode
   setPageFilters: (node: ReactNode) => void
@@ -43,6 +45,7 @@ const FiltersContext = createContext<FiltersContextValue | null>(null)
 const STORAGE_KEY_PERIOD = "metatron:filters:period"
 const STORAGE_KEY_CAMPANHA = "metatron:filters:campanha"
 const STORAGE_KEY_OPERADOR = "metatron:filters:operador"
+const STORAGE_KEY_EMPRESA = "metatron:filters:empresa"
 
 function today(): string {
   return format(referenceDate(), "yyyy-MM-dd")
@@ -97,6 +100,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
   const [period, setPeriodState] = useState<PeriodRange>(defaultPeriod())
   const [campanha, setCampanhaState] = useState<string | null>(null)
   const [operador, setOperadorState] = useState<string | null>(null)
+  const [empresa, setEmpresaState] = useState<string | null>(null)
   const [pageFilters, setPageFilters] = useState<ReactNode>(null)
 
   // Restaura do localStorage no mount
@@ -117,6 +121,8 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
       if (rawC && rawC !== "null") setCampanhaState(rawC)
       const rawO = localStorage.getItem(STORAGE_KEY_OPERADOR)
       if (rawO && rawO !== "null") setOperadorState(rawO)
+      const rawE = localStorage.getItem(STORAGE_KEY_EMPRESA)
+      if (rawE && rawE !== "null") setEmpresaState(rawE)
     } catch {
       // ignora
     }
@@ -151,6 +157,16 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const setEmpresa = useCallback((value: string | null) => {
+    setEmpresaState(value)
+    try {
+      if (value) localStorage.setItem(STORAGE_KEY_EMPRESA, value)
+      else localStorage.removeItem(STORAGE_KEY_EMPRESA)
+    } catch {
+      /* */
+    }
+  }, [])
+
   return (
     <FiltersContext.Provider
       value={{
@@ -160,6 +176,8 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
         setCampanha,
         operador,
         setOperador,
+        empresa,
+        setEmpresa,
         pageFilters,
         setPageFilters,
       }}

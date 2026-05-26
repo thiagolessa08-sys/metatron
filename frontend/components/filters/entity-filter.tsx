@@ -18,11 +18,12 @@ interface FilterOptions {
   campanhas: FilterItem[]
   operadores: FilterItem[]
   qualificacoes: FilterItem[]
+  empresas: FilterItem[]
 }
 
 interface EntityFilterProps {
   label: string
-  source: "campanhas" | "operadores" | "qualificacoes"
+  source: "campanhas" | "operadores" | "qualificacoes" | "empresas"
   value: string | null
   onChange: (value: string | null) => void
   icon?: React.ReactNode

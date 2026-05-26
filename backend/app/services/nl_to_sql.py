@@ -48,11 +48,10 @@ Fórmula de aproveitamento real: localizados / total * 100.
 ### metatron.TT_RELATORIO_METATRON
 Detalhamento de chamadas com tarifação (granular por chamada, mas via fornecedor de telefonia).
 Colunas varchar:
-- datahora (TIMESTAMP) — data/hora da chamada; use BETWEEN para filtrar por período
+- data_hora (TIMESTAMP) — data/hora da chamada; use BETWEEN para filtrar por período
 - numero (varchar) — telefone discado, casa com TT_ACIONAMENTOS.telefone
 - TechPrefix (varchar), Tipo_Numero (varchar), Operadora (varchar)
 - resultado (varchar), codigo_desligamento (varchar)
-- data (TIMESTAMP)
 Campos NUMERIC (podem ser usados com SUM/AVG/MAX/MIN diretamente):
 - tarifa, valor (custo em R$), duracao (segundos)
 - dur_min (minutos), dur_min_tarif (minutos tarifados)

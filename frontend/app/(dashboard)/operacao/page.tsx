@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
+import { useFilters } from "@/lib/filters-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Radio, Users, Phone, Clock, AlertCircle, RefreshCw } from "lucide-react"
 import { format, parseISO } from "date-fns"
@@ -43,6 +44,7 @@ function fmtDataExtenso(iso: string | null): string {
 
 export default function OperacaoPage() {
   const { user } = useAuth()
+  const { empresa } = useFilters()
   const [snap, setSnap] = useState<Snapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -54,7 +56,8 @@ export default function OperacaoPage() {
     setLoading(true)
     try {
       const token = localStorage.getItem("access_token")
-      const res = await fetch("/api/operacao/snapshot", {
+      const params = empresa ? `?empresa=${encodeURIComponent(empresa)}` : ""
+      const res = await fetch(`/api/operacao/snapshot${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -67,7 +70,7 @@ export default function OperacaoPage() {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [user, empresa])
 
   useEffect(() => {
     if (!user) return

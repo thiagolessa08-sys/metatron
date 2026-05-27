@@ -63,6 +63,7 @@ async def operacao_stream(
 
 @router.get("/snapshot")
 async def operacao_snapshot(
+    empresa: str | None = Query(default=None),
     _user=Depends(require_role("gestor", "admin")),
 ):
-    return await get_snapshot()
+    return await get_snapshot(empresa=empresa)

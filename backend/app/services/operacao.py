@@ -14,12 +14,17 @@ logger = logging.getLogger(__name__)
 _TABLE = "metatron.TT_ACIONAMENTOS_METATRON"
 
 
-async def _count_for_date(agent: SybaseAgentClient, data: str) -> int:
+def _safe(v: str) -> str:
+    return v.replace("'", "''")
+
+
+async def _count_for_date(agent: SybaseAgentClient, data: str, empresa: str | None = None) -> int:
     """data no formato yyyy-MM-dd."""
     try:
+        extra = f" AND empresa = '{_safe(empresa)}'" if empresa else ""
         r = await agent.query(
             f"SELECT COUNT(*) FROM {_TABLE} "
-            f"WHERE CAST(data AS DATE) = '{data}'"
+            f"WHERE CAST(data AS DATE) = '{data}'{extra}"
         )
         return int((r.get("rows") or [[0]])[0][0] or 0)
     except Exception as e:
@@ -27,10 +32,11 @@ async def _count_for_date(agent: SybaseAgentClient, data: str) -> int:
         return 0
 
 
-async def _latest_date(agent: SybaseAgentClient) -> str | None:
+async def _latest_date(agent: SybaseAgentClient, empresa: str | None = None) -> str | None:
     """Retorna a data mais recente no formato yyyy-MM-dd."""
     try:
-        r = await agent.query(f"SELECT MAX(data) FROM {_TABLE}")
+        extra = f" WHERE empresa = '{_safe(empresa)}'" if empresa else ""
+        r = await agent.query(f"SELECT MAX(data) FROM {_TABLE}{extra}")
         rows = r.get("rows") or []
         if rows and rows[0] and rows[0][0]:
             # data retorna "YYYY-MM-DD 00:00:00.0" — extrair só a data
@@ -40,20 +46,21 @@ async def _latest_date(agent: SybaseAgentClient) -> str | None:
     return None
 
 
-async def get_snapshot() -> OperacaoSnapshot:
+async def get_snapshot(empresa: str | None = None) -> OperacaoSnapshot:
     agent = SybaseAgentClient()
     today = date.today().isoformat()
     is_today = True
+    empresa_filter = f" AND empresa = '{_safe(empresa)}'" if empresa else ""
 
     # Tenta hoje primeiro. Se zero, cai pro último dia com dados.
-    total_hoje = await _count_for_date(agent, today)
+    total_hoje = await _count_for_date(agent, today, empresa)
     data_alvo = today
 
     if total_hoje == 0:
-        latest = await _latest_date(agent)
+        latest = await _latest_date(agent, empresa)
         if latest and latest != today:
             data_alvo = latest
-            total_hoje = await _count_for_date(agent, data_alvo)
+            total_hoje = await _count_for_date(agent, data_alvo, empresa)
             is_today = False
 
     # Agentes ativos no dia alvo com métricas
@@ -63,7 +70,7 @@ async def get_snapshot() -> OperacaoSnapshot:
             r_agentes = await agent.query(
                 f"SELECT operador, COUNT(*) AS total, AVG(duracao) AS dur_media, MAX(hora) AS ultima "
                 f"FROM {_TABLE} "
-                f"WHERE CAST(data AS DATE) = '{data_alvo}' AND operador IS NOT NULL "
+                f"WHERE CAST(data AS DATE) = '{data_alvo}' AND operador IS NOT NULL{empresa_filter} "
                 f"GROUP BY operador ORDER BY total DESC",
                 limit=200,
             )

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from app.auth.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.filters import FilterItem, FilterOptions
-from app.services.filter_options import get_filter_options
+from app.services.filter_options import get_filter_options, get_campanhas_by_empresa
 
 router = APIRouter(prefix="/api/filters")
 
@@ -18,3 +18,12 @@ async def filter_options(user: User = Depends(get_current_user)):
             qualificacoes=options.qualificacoes,
         )
     return options
+
+
+@router.get("/campanhas", response_model=list[FilterItem])
+async def campanhas_por_empresa(
+    empresa: str = Query(...),
+    _user: User = Depends(get_current_user),
+):
+    """Retorna campanhas pertencentes à empresa informada."""
+    return await get_campanhas_by_empresa(empresa)

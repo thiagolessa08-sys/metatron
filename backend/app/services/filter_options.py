@@ -8,6 +8,21 @@ _TTL = 300  # 5 minutos
 _TABLE = "metatron.TT_ACIONAMENTOS_METATRON"
 
 
+async def get_campanhas_by_empresa(empresa: str) -> list[FilterItem]:
+    """Retorna campanhas filtradas por empresa (sem cache — chamada dinâmica)."""
+    agent = SybaseAgentClient()
+    safe_e = empresa.replace("'", "''")
+    try:
+        r = await agent.query(
+            f"SELECT DISTINCT campanha FROM {_TABLE} "
+            f"WHERE empresa = '{safe_e}' AND campanha IS NOT NULL ORDER BY campanha",
+            limit=500,
+        )
+        return [FilterItem(id=str(row[0]).strip(), label=str(row[0]).strip()) for row in r["rows"] if row[0]]
+    except Exception:
+        return []
+
+
 async def get_filter_options() -> FilterOptions:
     now = time.time()
     if "options" in _cache and now - _cache["ts"] < _TTL:

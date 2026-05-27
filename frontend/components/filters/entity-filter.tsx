@@ -27,6 +27,7 @@ interface EntityFilterProps {
   value: string | null
   onChange: (value: string | null) => void
   icon?: React.ReactNode
+  filterByEmpresa?: string | null
 }
 
 export function EntityFilter({
@@ -35,17 +36,32 @@ export function EntityFilter({
   value,
   onChange,
   icon,
+  filterByEmpresa,
 }: EntityFilterProps) {
   const [search, setSearch] = useState("")
   const [open, setOpen] = useState(false)
 
+  // Campanhas filtradas por empresa (endpoint dinâmico)
+  const { data: campanhasDinamicas } = useQuery<FilterItem[]>({
+    queryKey: ["filter-campanhas-empresa", filterByEmpresa],
+    queryFn: async () =>
+      (await api.get(`/api/filters/campanhas?empresa=${encodeURIComponent(filterByEmpresa!)}`)).data,
+    enabled: source === "campanhas" && !!filterByEmpresa,
+    staleTime: 2 * 60_000,
+  })
+
+  // Opções gerais (todos os filtros, sem empresa)
   const { data } = useQuery<FilterOptions>({
     queryKey: ["filter-options"],
     queryFn: async () => (await api.get("/api/filters/options")).data,
     staleTime: 5 * 60_000,
+    enabled: !(source === "campanhas" && !!filterByEmpresa),
   })
 
-  const items = data?.[source] ?? []
+  const items: FilterItem[] =
+    source === "campanhas" && filterByEmpresa
+      ? (campanhasDinamicas ?? [])
+      : (data?.[source] ?? [])
   const filtered = useMemo(() => {
     if (!search.trim()) return items.slice(0, 50)
     const q = search.toLowerCase()

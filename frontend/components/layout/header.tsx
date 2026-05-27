@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Info, Menu, Search, Megaphone, UserRound, Building2 } from "lucide-react"
+import { Bell, Menu, Search, Megaphone, Building2 } from "lucide-react"
 import Image from "next/image"
 import { ProfilePill } from "@/components/layout/profile-pill"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
@@ -13,7 +13,7 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const { pageFilters, campanha, setCampanha, operador, setOperador, empresa, setEmpresa } = useFilters()
+  const { pageFilters, campanha, setCampanha, empresa, setEmpresa } = useFilters()
 
   return (
     <div className="flex items-center justify-between gap-[18px] px-1 py-0.5">
@@ -40,26 +40,22 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="hidden flex-1 items-center justify-center gap-2 md:flex">
         <PeriodFilter />
         <EntityFilter
-          label="Campanha"
-          source="campanhas"
-          value={campanha}
-          onChange={setCampanha}
-          icon={<Megaphone className="h-4 w-4 text-[var(--muted-finexy)]" strokeWidth={1.8} />}
-        />
-        <EntityFilter
-          label="Operador"
-          source="operadores"
-          value={operador}
-          onChange={setOperador}
-          icon={<UserRound className="h-4 w-4 text-[var(--muted-finexy)]" strokeWidth={1.8} />}
-        />
-        <EntityFilter
           label="Empresa"
           source="empresas"
           value={empresa}
           onChange={setEmpresa}
           icon={<Building2 className="h-4 w-4 text-[var(--muted-finexy)]" strokeWidth={1.8} />}
         />
+        {empresa && (
+          <EntityFilter
+            label="Campanha"
+            source="campanhas"
+            value={campanha}
+            onChange={setCampanha}
+            filterByEmpresa={empresa}
+            icon={<Megaphone className="h-4 w-4 text-[var(--muted-finexy)]" strokeWidth={1.8} />}
+          />
+        )}
         {pageFilters}
       </div>
 

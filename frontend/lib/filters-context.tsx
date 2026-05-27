@@ -159,9 +159,12 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 
   const setEmpresa = useCallback((value: string | null) => {
     setEmpresaState(value)
+    // Reseta campanha sempre que empresa mudar
+    setCampanhaState(null)
     try {
       if (value) localStorage.setItem(STORAGE_KEY_EMPRESA, value)
       else localStorage.removeItem(STORAGE_KEY_EMPRESA)
+      localStorage.removeItem(STORAGE_KEY_CAMPANHA)
     } catch {
       /* */
     }

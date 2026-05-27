@@ -171,26 +171,26 @@ export default function HomePage() {
         graphic: [
           {
             type: "text",
-            left: "28%",
-            top: "40%",
+            left: "29%",
+            top: "36%",
             style: {
               text: "Total",
               textAlign: "center",
               fill: "#9a9a9a",
-              fontSize: 13,
+              fontSize: 15,
               fontFamily: "inherit",
             },
             silent: true,
           },
           {
             type: "text",
-            left: "28%",
-            top: "46%",
+            left: "29%",
+            top: "44%",
             style: {
               text: qualTotalFmt,
               textAlign: "center",
               fill: "#111111",
-              fontSize: 44,
+              fontSize: 52,
               fontWeight: "bold",
               fontFamily: "inherit",
             },

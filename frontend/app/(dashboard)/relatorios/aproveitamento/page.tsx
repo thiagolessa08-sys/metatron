@@ -1,12 +1,10 @@
 "use client"
-import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import ReactECharts from "echarts-for-react"
 import { ExportButton } from "@/components/relatorios/export-button"
 import { Skeleton } from "@/components/ui/skeleton"
 import api from "@/lib/api"
-import { useFilters, usePageFilters } from "@/lib/filters-context"
-import { EmpresaFilter } from "@/components/filters/empresa-filter"
+import { useFilters } from "@/lib/filters-context"
 import { Phone, Target, Users, Gauge, Award, AlertCircle, Package, Radio } from "lucide-react"
 
 interface AprItem {
@@ -27,14 +25,7 @@ interface AprResult {
 }
 
 export default function AproveitamentoPage() {
-  const { campanha } = useFilters()
-  const [empresa, setEmpresa] = useState<string | null>(null)
-
-  const filterNode = useMemo(
-    () => <EmpresaFilter value={empresa} onChange={setEmpresa} />,
-    [empresa]
-  )
-  usePageFilters(filterNode)
+  const { campanha, empresa } = useFilters()
 
   const body = { campanha: campanha ?? undefined, empresa: empresa ?? undefined }
 

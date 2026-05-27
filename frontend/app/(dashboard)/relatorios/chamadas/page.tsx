@@ -84,7 +84,7 @@ function resultadoCor(resultado: string): { bg: string; text: string } {
 }
 
 export default function ChamadasPage() {
-  const { period, operador } = useFilters()
+  const { period, operador, empresa } = useFilters()
   const [tab, setTab] = useState<"visao" | "lista">("visao")
 
   const body = {
@@ -93,6 +93,7 @@ export default function ChamadasPage() {
     operadora: undefined,
     resultado: undefined,
     operador: operador ?? undefined,
+    empresa: empresa ?? undefined,
   }
 
   const { data: resumo, isLoading: resumoLoading } = useQuery<ChamadasResumo>({

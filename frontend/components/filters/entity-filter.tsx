@@ -63,9 +63,9 @@ export function EntityFilter({
       ? (campanhasDinamicas ?? [])
       : (data?.[source] ?? [])
   const filtered = useMemo(() => {
-    if (!search.trim()) return items.slice(0, 50)
+    if (!search.trim()) return items
     const q = search.toLowerCase()
-    return items.filter((i) => i.label.toLowerCase().includes(q)).slice(0, 50)
+    return items.filter((i) => i.label.toLowerCase().includes(q))
   }, [items, search])
 
   const selectedLabel =
@@ -118,7 +118,7 @@ export function EntityFilter({
             />
           </div>
         </div>
-        <div className="max-h-72 overflow-y-auto py-1">
+        <div className="max-h-80 overflow-y-auto py-1">
           {filtered.length === 0 ? (
             <div className="px-3 py-6 text-center text-xs text-[var(--muted-finexy)]">
               Nenhum resultado

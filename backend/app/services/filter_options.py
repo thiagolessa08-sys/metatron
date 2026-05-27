@@ -30,11 +30,11 @@ async def get_filter_options() -> FilterOptions:
 
     agent = SybaseAgentClient()
 
-    async def distinct(col: str) -> list[FilterItem]:
+    async def distinct(col: str, limit: int = 500) -> list[FilterItem]:
         try:
             r = await agent.query(
                 f"SELECT DISTINCT {col} FROM {_TABLE} WHERE {col} IS NOT NULL ORDER BY {col}",
-                limit=500,
+                limit=limit,
             )
             return [FilterItem(id=str(row[0]).strip(), label=str(row[0]).strip()) for row in r["rows"] if row[0]]
         except Exception:
@@ -43,7 +43,7 @@ async def get_filter_options() -> FilterOptions:
     campanhas = await distinct("campanha")
     operadores = await distinct("operador")
     qualificacoes = await distinct("descricao")
-    empresas = await distinct("empresa")
+    empresas = await distinct("empresa", limit=1000)
 
     options = FilterOptions(campanhas=campanhas, operadores=operadores, qualificacoes=qualificacoes, empresas=empresas)
     _cache["options"] = options

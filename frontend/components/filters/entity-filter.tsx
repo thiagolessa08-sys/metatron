@@ -112,6 +112,7 @@ export function EntityFilter({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
               placeholder="Buscar…"
               className="w-full rounded-lg bg-[var(--chip)] py-1.5 pl-8 pr-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--orange)]/40"
               autoFocus

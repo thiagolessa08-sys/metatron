@@ -96,7 +96,7 @@ export default function ChatPage() {
           <MessageSquare className="h-5 w-5 text-[var(--orange)]" />
           <div>
             <h1 className="text-base font-semibold leading-tight">Chat Analítico</h1>
-            <p className="text-xs text-muted-foreground">Faça perguntas sobre os dados em português natural</p>
+            <p className="text-xs text-muted-foreground">IA Analítica Cordeiro</p>
           </div>
         </div>
         {messages.length > 0 && (
@@ -120,7 +120,7 @@ export default function ChatPage() {
               <MessageSquare className="h-7 w-7 text-primary" />
             </div>
             <div className="space-y-1">
-              <p className="font-medium">Olá! Sou seu analista de dados.</p>
+              <p className="font-medium">IA Analítica Cordeiro</p>
               <p className="text-sm text-muted-foreground max-w-sm">
                 Faça perguntas sobre ligações, operadores, campanhas e qualificações.
                 Vou traduzir para SQL e trazer os resultados com análise.

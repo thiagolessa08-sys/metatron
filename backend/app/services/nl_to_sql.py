@@ -19,7 +19,7 @@ Registro granular de cada acionamento/ligação (1 linha por chamada).
 
 | Coluna      | Tipo      | Descrição                                                  |
 |-------------|-----------|------------------------------------------------------------|
-| empresa     | varchar   | Código da empresa (ex: 'CORDEIRO', '6220')                 |
+| empresa     | varchar   | Código da empresa (ex: 'JOYTEC', '6220')                 |
 | campanha    | varchar   | Nome da campanha (ex: '6220_ELAINE_SP')                    |
 | operador    | varchar   | Login/nome do atendente (ex: 'EMERSON_ALEXANDRE')          |
 | descricao   | varchar   | Qualificação/desfecho da chamada (ex: 'CONVERSAO', 'NÃO ATENDEU') |
@@ -31,7 +31,7 @@ Registro granular de cada acionamento/ligação (1 linha por chamada).
 | desligou    | varchar   | Quem encerrou a chamada                                    |
 
 Filtros comuns:
-  - Por empresa:  WHERE empresa = 'CORDEIRO'
+  - Por empresa:  WHERE empresa = 'JOYTEC'
   - Por período:  WHERE data BETWEEN '2026-01-01' AND '2026-04-30'
   - Por dia:      WHERE CAST(data AS DATE) = '2026-05-20'
   - Por operador: WHERE operador = 'EMERSON_ALEXANDRE'
@@ -195,9 +195,9 @@ Pergunta: "Custo total por operador no último mês"
 Resposta:
 {{"sql": "SELECT a.operador, SUM(r.Valor) AS custo_total FROM metatron.TT_ACIONAMENTOS_METATRON a INNER JOIN metatron.TT_RELATORIO_METATRON r ON a.telefone = r.numero WHERE a.data BETWEEN '2026-04-29' AND '2026-05-29' GROUP BY a.operador ORDER BY custo_total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "custo_total"}}}}
 
-Pergunta: "Ligações da empresa CORDEIRO"
+Pergunta: "Ligações da empresa JOYTEC"
 Resposta:
-{{"sql": "SELECT campanha, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE empresa = 'CORDEIRO' GROUP BY campanha ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "campanha", "y_column": "total"}}}}
+{{"sql": "SELECT campanha, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE empresa = 'JOYTEC' GROUP BY campanha ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "campanha", "y_column": "total"}}}}
 
 Pergunta: "Quais as qualificações mais usadas no mês?"
 Resposta:

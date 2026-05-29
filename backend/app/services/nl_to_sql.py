@@ -10,66 +10,90 @@ from app.config import settings
 from app.services.sql_validator import validate_and_fix, SqlValidationError
 from app.services.sybase_agent import SybaseAgentClient
 
-# Schema resumido para o system prompt — apenas colunas relevantes
+# Schema real — colunas confirmadas nas tabelas Sybase IQ
 _SCHEMA_CONTEXT = """
 ## Schema disponível (Sybase IQ — metatron)
 
 ### metatron.TT_ACIONAMENTOS_METATRON
-Registro de cada ligação/acionamento realizado (granular: 1 linha por chamada).
-Colunas:
-- campanha (varchar) — identifica a campanha; formato '<empresa>_<nome>' (ex: '6220_elaine_sp')
-- cpf (varchar) — CPF do contato (sem máscara)
-- telefone (varchar) — número discado (sem máscara, ex: '11945003524')
-- data (TIMESTAMP) — data/hora do acionamento; use BETWEEN com literais ISO: WHERE data BETWEEN '2026-01-01' AND '2026-04-01'
-- hora (TIME) — hora isolada; DATEPART(hour, hora) extrai a hora inteira (0-23)
-- duracao (INTEGER) — duração da chamada em segundos
-- operador (varchar) — nome do atendente (ex: 'EMERSON_ALEXANDRE')
-- descricao (varchar) — qualificação/desfecho da chamada
-- desligou (varchar) — quem desligou
-Agregações livres: COUNT(*), SUM(duracao), AVG(duracao), MAX(duracao), MIN(duracao).
+Registro granular de cada acionamento/ligação (1 linha por chamada).
+
+| Coluna      | Tipo      | Descrição                                                  |
+|-------------|-----------|------------------------------------------------------------|
+| empresa     | varchar   | Código da empresa (ex: 'CORDEIRO', '6220')                 |
+| campanha    | varchar   | Nome da campanha (ex: '6220_ELAINE_SP')                    |
+| operador    | varchar   | Login/nome do atendente (ex: 'EMERSON_ALEXANDRE')          |
+| descricao   | varchar   | Qualificação/desfecho da chamada (ex: 'CONVERSAO', 'NÃO ATENDEU') |
+| data        | TIMESTAMP | Data e hora do acionamento — filtre com BETWEEN 'YYYY-MM-DD' |
+| hora        | TIME      | Hora isolada — use DATEPART(hour, hora) para extrair 0-23  |
+| duracao     | INTEGER   | Duração em segundos — use SUM/AVG/MAX diretamente          |
+| telefone    | varchar   | Número discado (ex: '11945003524')                         |
+| cpf         | varchar   | CPF do contato (sem máscara)                               |
+| desligou    | varchar   | Quem encerrou a chamada                                    |
+
+Filtros comuns:
+  - Por empresa:  WHERE empresa = 'CORDEIRO'
+  - Por período:  WHERE data BETWEEN '2026-01-01' AND '2026-04-30'
+  - Por dia:      WHERE CAST(data AS DATE) = '2026-05-20'
+  - Por operador: WHERE operador = 'EMERSON_ALEXANDRE'
 
 ### metatron.TT_METRICAS_METATRON
-Snapshot agregado por campanha (1 linha por campanha).
-Colunas:
-- empresa (varchar) — código da empresa (ex: '6220'); é o prefixo de `campanha` antes do '_'
-- fila (varchar) — código da fila/grupo (ex: '81004')
-- campanha (varchar) — mesma chave de TT_ACIONAMENTOS.campanha
-- ativo (varchar) — '1'=ativa, '0'=inativa
-- servidor (varchar), hora_original (varchar), id (varchar)
-- data (DATE), hora (TIME)
-- aproveitamento (varchar, percentual 0-100; única coluna numérica que está como VARCHAR)
-Campos NUMERIC (podem ser usados com SUM/AVG/MAX/MIN diretamente, sem CAST):
-- total, localizados, em_contato, contatados, descartados
-- novos, resets, atualiza, higieniza
-- agendamentos_publicos, agendamentos_privados
-- discados_total, atendidas_hoje
-Fórmula de aproveitamento real: localizados / total * 100.
+Snapshot agregado de mailing por campanha (1 linha por campanha).
+
+| Coluna                | Tipo    | Descrição                                          |
+|-----------------------|---------|----------------------------------------------------|
+| empresa               | varchar | Código da empresa                                  |
+| campanha              | varchar | Mesma chave de TT_ACIONAMENTOS.campanha            |
+| servidor              | varchar | Servidor/instância do discador                     |
+| ativo                 | varchar | '1' = campanha ativa, '0' = inativa                |
+| total                 | NUMERIC | Total de registros no mailing                      |
+| localizados           | NUMERIC | Registros localizados                              |
+| em_contato            | NUMERIC | Em tratamento/contato                              |
+| contatados            | NUMERIC | Efetivamente contatados                            |
+| discados_total        | NUMERIC | Total de discagens realizadas                      |
+| atendidas_hoje        | NUMERIC | Atendimentos no dia                                |
+| agendamentos_publicos | NUMERIC | Agendamentos públicos                              |
+| agendamentos_privados | NUMERIC | Agendamentos privados                              |
+| aproveitamento        | varchar | Percentual 0-100 — ATENÇÃO: é VARCHAR, use localizados / total * 100 para calcular |
+| fila                  | varchar | Código da fila/grupo (ex: '81004')                 |
+| data                  | DATE    | Data do snapshot                                   |
+| hora                  | TIME    | Hora do snapshot                                   |
+
+Campos NUMERIC aceitam SUM/AVG/MAX/MIN diretamente, sem CAST.
+Para aproveitamento real: localizados / total * 100 AS aproveitamento_pct
 
 ### metatron.TT_RELATORIO_METATRON
-Detalhamento de chamadas com tarifação (granular por chamada, mas via fornecedor de telefonia).
-Colunas varchar:
-- data_hora (TIMESTAMP) — data/hora da chamada; use BETWEEN para filtrar por período
-- numero (varchar) — telefone discado, casa com TT_ACIONAMENTOS.telefone
-- TechPrefix (varchar), Tipo_Numero (varchar), Operadora (varchar)
-- resultado (varchar), codigo_desligamento (varchar)
-Campos NUMERIC (podem ser usados com SUM/AVG/MAX/MIN diretamente):
-- tarifa, valor (custo em R$), duracao (segundos)
-- dur_min (minutos), dur_min_tarif (minutos tarifados)
+Detalhamento de chamadas com tarifação por chamada (fonte: fornecedor de telefonia).
 
-## Relacionamentos entre as tabelas
+| Coluna              | Tipo      | Descrição                                          |
+|---------------------|-----------|----------------------------------------------------|
+| data_hora           | TIMESTAMP | Data e hora da chamada — use BETWEEN para filtrar  |
+| numero              | varchar   | Telefone discado — casa com TT_ACIONAMENTOS.telefone |
+| Operadora           | varchar   | Operadora da chamada (atenção: O maiúsculo)        |
+| resultado           | varchar   | Resultado da chamada                               |
+| duracao             | NUMERIC   | Duração em segundos                                |
+| Dur_Min             | NUMERIC   | Duração em minutos (atenção: D e M maiúsculos)     |
+| Valor               | NUMERIC   | Custo em R$ (atenção: V maiúsculo)                 |
+| tarifa              | NUMERIC   | Tarifa unitária                                    |
+| dur_min_tarif       | NUMERIC   | Minutos tarifados                                  |
+| TechPrefix          | varchar   | Prefixo técnico                                    |
+| Tipo_Numero         | varchar   | Tipo do número                                     |
+| codigo_desligamento | varchar   | Código de encerramento                             |
 
-1. **Acionamentos × Métricas** (por campanha):
-   INNER JOIN metatron.TT_METRICAS_METATRON m ON a.campanha = m.campanha
-   Use para combinar volume real de ligações (acionamentos) com o snapshot de mailing (métricas).
+ATENÇÃO: nesta tabela use os nomes exatos: `Operadora`, `Dur_Min`, `Valor` (com maiúsculas).
 
-2. **Acionamentos × Relatório de tarifação** (por telefone):
-   INNER JOIN metatron.TT_RELATORIO_METATRON r ON a.telefone = r.numero
-   Use para juntar operador/campanha (acionamentos) com custo/operadora (relatório).
+## Relacionamentos
 
-3. **Métricas × Relatório**: não há ligação direta — passe sempre via TT_ACIONAMENTOS.
+1. **Acionamentos × Métricas** — por campanha:
+   JOIN metatron.TT_METRICAS_METATRON m ON a.campanha = m.campanha
+   Combina volume real de ligações com snapshot de mailing.
 
-4. **Hierarquia**: empresa → campanha → fila → acionamentos.
-   Para filtrar por empresa em TT_ACIONAMENTOS, use o prefixo: WHERE campanha LIKE '6220_%'
+2. **Acionamentos × Tarifação** — por telefone:
+   JOIN metatron.TT_RELATORIO_METATRON r ON a.telefone = r.numero
+   Combina operador/campanha com custo/operadora.
+
+3. **Métricas × Tarifação**: sem ligação direta — use TT_ACIONAMENTOS como ponte.
+
+4. **Hierarquia**: empresa → campanha → operador → acionamentos.
 """
 
 _SYSTEM_PROMPT = f"""Você é um analista de dados especialista em Sybase IQ para uma central de discagem (call center).
@@ -145,35 +169,43 @@ Se não houver gráfico adequado, omita o campo chart_hint.
 
 Pergunta: "Quantas ligações por operador hoje?"
 Resposta:
-{{"sql": "SELECT operador, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data = '2026-05-18' GROUP BY operador ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "total"}}}}
+{{"sql": "SELECT operador, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE CAST(data AS DATE) = '2026-05-29' GROUP BY operador ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "total"}}}}
 
 Pergunta: "Qual o aproveitamento das campanhas ativas?"
 Resposta:
-{{"sql": "SELECT campanha, aproveitamento, discados_total, atendidas_hoje FROM metatron.TT_METRICAS_METATRON WHERE ativo = '1' ORDER BY campanha", "chart_hint": {{"type": "bar", "x_column": "campanha", "y_column": "aproveitamento"}}}}
+{{"sql": "SELECT campanha, localizados / total * 100 AS aproveitamento_pct, discados_total, atendidas_hoje FROM metatron.TT_METRICAS_METATRON WHERE ativo = '1' ORDER BY aproveitamento_pct DESC", "chart_hint": {{"type": "bar", "x_column": "campanha", "y_column": "aproveitamento_pct"}}}}
 
-Pergunta: "Qual operador ficou mais tempo em ligação na semana passada?"
+Pergunta: "Qual operador ficou mais tempo em ligação esta semana?"
 Resposta:
-{{"sql": "SELECT operador, SUM(duracao) AS tempo_total_s FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data BETWEEN '2026-05-10' AND '2026-05-16' GROUP BY operador ORDER BY tempo_total_s DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "tempo_total_s"}}}}
+{{"sql": "SELECT operador, SUM(duracao) AS tempo_total_s FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data BETWEEN '2026-05-26' AND '2026-05-29' GROUP BY operador ORDER BY tempo_total_s DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "tempo_total_s"}}}}
 
 Pergunta: "Qual o custo total por operadora?"
 Resposta:
-{{"sql": "SELECT Operadora, SUM(valor) AS custo_total FROM metatron.TT_RELATORIO_METATRON GROUP BY Operadora ORDER BY custo_total DESC", "chart_hint": {{"type": "bar", "x_column": "Operadora", "y_column": "custo_total"}}}}
+{{"sql": "SELECT Operadora, SUM(Valor) AS custo_total FROM metatron.TT_RELATORIO_METATRON GROUP BY Operadora ORDER BY custo_total DESC", "chart_hint": {{"type": "bar", "x_column": "Operadora", "y_column": "custo_total"}}}}
 
 Pergunta: "Quantas campanhas estão ativas?"
 Resposta:
-{{"sql": "SELECT campanha, fila, total, discados_total, atendidas_hoje FROM metatron.TT_METRICAS_METATRON WHERE ativo = '1'"}}
+{{"sql": "SELECT campanha, fila, total, discados_total, atendidas_hoje FROM metatron.TT_METRICAS_METATRON WHERE ativo = '1' ORDER BY campanha"}}
 
 Pergunta: "Volume de ligações reais vs tamanho do mailing por campanha"
-Resposta (JOIN acionamentos × métricas pela coluna campanha):
+Resposta:
 {{"sql": "SELECT m.campanha, SUM(m.total) AS mailing, COUNT(a.campanha) AS ligacoes FROM metatron.TT_METRICAS_METATRON m LEFT JOIN metatron.TT_ACIONAMENTOS_METATRON a ON a.campanha = m.campanha GROUP BY m.campanha ORDER BY ligacoes DESC", "chart_hint": {{"type": "bar", "x_column": "campanha", "y_column": "ligacoes"}}}}
 
 Pergunta: "Custo total por operador no último mês"
-Resposta (JOIN acionamentos × relatório pelo telefone):
-{{"sql": "SELECT a.operador, SUM(r.valor) AS custo_total FROM metatron.TT_ACIONAMENTOS_METATRON a INNER JOIN metatron.TT_RELATORIO_METATRON r ON a.telefone = r.numero WHERE a.data BETWEEN '2026-04-18' AND '2026-05-18' GROUP BY a.operador ORDER BY custo_total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "custo_total"}}}}
+Resposta:
+{{"sql": "SELECT a.operador, SUM(r.Valor) AS custo_total FROM metatron.TT_ACIONAMENTOS_METATRON a INNER JOIN metatron.TT_RELATORIO_METATRON r ON a.telefone = r.numero WHERE a.data BETWEEN '2026-04-29' AND '2026-05-29' GROUP BY a.operador ORDER BY custo_total DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "custo_total"}}}}
 
-Pergunta: "Volume de ligações da empresa 6220"
-Resposta (empresa = prefixo da campanha):
-{{"sql": "SELECT campanha, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE campanha LIKE '6220_%' GROUP BY campanha ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "campanha", "y_column": "total"}}}}
+Pergunta: "Ligações da empresa CORDEIRO"
+Resposta:
+{{"sql": "SELECT campanha, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE empresa = 'CORDEIRO' GROUP BY campanha ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "campanha", "y_column": "total"}}}}
+
+Pergunta: "Quais as qualificações mais usadas no mês?"
+Resposta:
+{{"sql": "SELECT descricao, COUNT(*) AS total FROM metatron.TT_ACIONAMENTOS_METATRON WHERE data BETWEEN '2026-05-01' AND '2026-05-29' GROUP BY descricao ORDER BY total DESC", "chart_hint": {{"type": "bar", "x_column": "descricao", "y_column": "total"}}}}
+
+Pergunta: "Ranking de operadores por número de conversões"
+Resposta:
+{{"sql": "SELECT operador, COUNT(*) AS conversoes FROM metatron.TT_ACIONAMENTOS_METATRON WHERE descricao = 'CONVERSAO' GROUP BY operador ORDER BY conversoes DESC", "chart_hint": {{"type": "bar", "x_column": "operador", "y_column": "conversoes"}}}}
 """
 
 _ANALYSIS_SYSTEM = """Você é um analista de dados de call center.

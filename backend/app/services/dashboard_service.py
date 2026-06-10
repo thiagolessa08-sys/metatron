@@ -15,6 +15,31 @@ from app.schemas.dashboard import (
 
 logger = logging.getLogger(__name__)
 
+# === Agrupamentos de status (descricao) para o funil de conversão ===
+# Telefone inválido/inexistente → não localizado
+_NAO_LOCALIZADO = [
+    "TEL INCORRETO", "TELEFONE_ERRADO", "TELEFONE INDISPONIVEL",
+    "TELEFONE_INVALIDO", "TELEFONE_INCORRETO", "NAO_ENCONTRADO",
+    "cliente_inexistente", "NUMERO_ERRADO",
+]
+# Localizado mas sem contato humano (inclui não-tabulados) → exclui de "Contatados"
+_SEM_CONTATO = [
+    "LIGACAO CAIU", "LIGACAO_CAIU", "CAIU", "LIGACAO_CAIU_COM_CLIENTE",
+    "AUSENTE", "CAIXA POSTAL", "caixa_postal", "MUDA", "MUDO",
+    "ligacao_muda", "TELEFONE_MUDO", "OCUPADO", "Agente Nao Tabulou",
+]
+_NEGOCIACAO = ["Negociando", "Negociacao_no_whts_", "NEGOCIANDO_WHATSAPP"]
+_FECHADOS = [
+    "VENDA", "VENDA_FEITA", "VENDA_FEITA_POR_TELEFONE", "contrato_fechado",
+    "cliente_fechado", "CLIENTE JA FECHADO", "TORNOU_SE_CLIENTE", "FECHADO",
+    "CONTRATO_LIQUIDADO", "CLIENTE_FINALIZADO",
+]
+
+
+def _in_list(valores: list[str]) -> str:
+    """Monta lista para cláusula IN com aspas escapadas."""
+    return ", ".join("'" + v.replace("'", "''") + "'" for v in valores)
+
 
 def _safe_int(value, default: int = 0) -> int:
     if value is None:
@@ -90,6 +115,37 @@ async def dashboard_executive(
     total_ligacoes = (
         _safe_int(total_raw["rows"][0][0]) if total_raw.get("rows") else 0
     )
+
+    # === 1b) Funil de conversão (agregação condicional por status) ===
+    sql_funil = (
+        "SELECT "
+        f"SUM(CASE WHEN descricao IN ({_in_list(_NAO_LOCALIZADO)}) THEN 1 ELSE 0 END) AS nao_localizado, "
+        f"SUM(CASE WHEN descricao IN ({_in_list(_SEM_CONTATO)}) OR descricao IS NULL THEN 1 ELSE 0 END) AS sem_contato, "
+        "SUM(CASE WHEN descricao = 'Agente Nao Tabulou' THEN 1 ELSE 0 END) AS agente_nao_tabulou, "
+        f"SUM(CASE WHEN descricao IN ({_in_list(_NEGOCIACAO)}) THEN 1 ELSE 0 END) AS negociacao, "
+        f"SUM(CASE WHEN descricao IN ({_in_list(_FECHADOS)}) THEN 1 ELSE 0 END) AS fechados "
+        f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where}"
+    )
+    funil_raw = await _try_query(agent, sql_funil, limit=1)
+    nao_localizado = sem_contato = agente_nao_tabulou = negociacao_n = fechados_n = 0
+    if funil_raw.get("rows"):
+        fr = funil_raw["rows"][0]
+        nao_localizado = _safe_int(fr[0])
+        sem_contato = _safe_int(fr[1])
+        agente_nao_tabulou = _safe_int(fr[2])
+        negociacao_n = _safe_int(fr[3])
+        fechados_n = _safe_int(fr[4])
+
+    localizados = max(total_ligacoes - nao_localizado, 0)
+    contatados = max(total_ligacoes - nao_localizado - sem_contato, 0)
+    funil = [
+        TopItem(nome="Total de ligações", total=total_ligacoes),
+        TopItem(nome="Localizados", total=localizados),
+        TopItem(nome="Contatados", total=contatados),
+        TopItem(nome="Agente Não Tabulou", total=agente_nao_tabulou),
+        TopItem(nome="Negociação", total=negociacao_n),
+        TopItem(nome="Fechados", total=fechados_n),
+    ]
 
     # === 2) Operadores únicos ===
     sql_ops = (
@@ -188,6 +244,8 @@ async def dashboard_executive(
 
     return DashboardResult(
         total_ligacoes=total_ligacoes,
+        fechados_total=fechados_n,
+        funil=funil,
         operadores_unicos=operadores_unicos,
         campanhas_unicas=campanhas_unicas,
         qualificacoes_unicas=qualificacoes_unicas,

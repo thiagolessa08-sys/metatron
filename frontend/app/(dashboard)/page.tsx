@@ -6,7 +6,6 @@ import {
   CheckCircle,
   Clock,
   Megaphone,
-  Phone,
   Tag,
   TrendingUp,
   Trophy,
@@ -42,6 +41,8 @@ interface TopItem {
 }
 interface DashboardResult {
   total_ligacoes: number
+  fechados_total: number
+  funil: TopItem[]
   operadores_unicos: number
   campanhas_unicas: number
   qualificacoes_unicas: number
@@ -56,16 +57,15 @@ interface DashboardResult {
   top_qualificacao: TopItem | null
 }
 
-const PALETA = [
-  "#4DC3E8",
-  "#111111",
-  "#f4a51b",
-  "#16a34a",
-  "#8a8a8a",
-  "#ff9966",
-  "#3a8df0",
-  "#e23b3b",
-]
+// Cores por etapa do funil (azul claro → escuro; Fechados em verde de sucesso)
+const FUNNEL_COLOR: Record<string, string> = {
+  "Total de ligações": "#9BDCEF",
+  "Localizados": "#5EC7EA",
+  "Agente Não Tabulou": "#AEB6BB",
+  "Contatados": "#28ACDB",
+  "Negociação": "#1784AD",
+  "Fechados": "#16A34A",
+}
 
 function fmtSeg(s: number): string {
   if (!s) return "—"
@@ -142,73 +142,45 @@ export default function HomePage() {
       }
     : null
 
-  const qualTotal = data
-    ? data.top_qualificacoes.slice(0, 6).reduce((s, q) => s + q.total, 0)
-    : 0
-
-  const qualTotalFmt = qualTotal >= 1_000_000
-    ? `${(qualTotal / 1_000_000).toFixed(1).replace(".", ",")}M`
-    : qualTotal >= 1_000
-    ? `${(qualTotal / 1_000).toFixed(1).replace(".", ",")}k`
-    : qualTotal.toString()
-
-  const qualOption = data
+  const totalFunil = data?.funil?.[0]?.total ?? 0
+  const funnelOption = data
     ? {
-        tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b> ({d}%)" },
-        legend: {
-          orient: "vertical",
-          right: 0,
-          top: "center",
-          type: "scroll",
-          textStyle: { fontSize: 11 },
-          formatter: (name: string) => {
-            const item = data.top_qualificacoes.find((q) => q.nome === name)
-            if (!item || qualTotal === 0) return name
-            const pct = ((item.total / qualTotal) * 100).toFixed(1)
-            return `${name}   ${pct}%`
+        tooltip: {
+          trigger: "item",
+          formatter: (p: { name: string; value: number }) => {
+            const pct = totalFunil > 0 ? ((p.value / totalFunil) * 100).toFixed(1) : "0"
+            return `${p.name}: <b>${p.value.toLocaleString("pt-BR")}</b> (${pct}%)`
           },
         },
-        graphic: [
-          {
-            type: "text",
-            left: "29%",
-            top: "36%",
-            style: {
-              text: "Total",
-              textAlign: "center",
-              fill: "#9a9a9a",
-              fontSize: 15,
-              fontFamily: "inherit",
-            },
-            silent: true,
-          },
-          {
-            type: "text",
-            left: "29%",
-            top: "44%",
-            style: {
-              text: qualTotalFmt,
-              textAlign: "center",
-              fill: "#111111",
-              fontSize: 52,
-              fontWeight: "bold",
-              fontFamily: "inherit",
-            },
-            silent: true,
-          },
-        ],
         series: [
           {
-            type: "pie",
-            radius: ["42%", "72%"],
-            center: ["29%", "50%"],
-            data: data.top_qualificacoes.slice(0, 6).map((q, i) => ({
-              name: q.nome,
-              value: q.total,
-              itemStyle: { color: PALETA[i % PALETA.length] },
-            })),
-            label: { show: false },
+            type: "funnel",
+            left: "4%",
+            right: "4%",
+            top: 8,
+            bottom: 8,
+            minSize: "14%",
+            maxSize: "100%",
+            sort: "descending",
+            gap: 3,
+            funnelAlign: "center",
+            label: {
+              show: true,
+              position: "inside",
+              color: "#fff",
+              fontSize: 11,
+              fontWeight: 600,
+              formatter: (p: { name: string; value: number }) =>
+                `${p.name}  ${p.value.toLocaleString("pt-BR")}`,
+            },
             labelLine: { show: false },
+            itemStyle: { borderColor: "#fff", borderWidth: 2 },
+            emphasis: { label: { fontSize: 12 } },
+            data: (data.funil ?? []).map((f) => ({
+              name: f.nome,
+              value: f.total,
+              itemStyle: { color: FUNNEL_COLOR[f.nome] ?? "#4DC3E8" },
+            })),
           },
         ],
       }
@@ -341,12 +313,14 @@ export default function HomePage() {
               <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <Kpi
                   highlight
-                  label="Total de ligações"
-                  value={data.total_ligacoes.toLocaleString("pt-BR")}
-                  hint="No período selecionado"
-                  icon={<Phone className="h-4 w-4" />}
-                  sparklineData={spark}
-                  trend={trend}
+                  label="Fechados"
+                  value={data.fechados_total.toLocaleString("pt-BR")}
+                  hint={
+                    data.total_ligacoes > 0
+                      ? `${((data.fechados_total / data.total_ligacoes) * 100).toFixed(2)}% de ${data.total_ligacoes.toLocaleString("pt-BR")} ligações`
+                      : "No período selecionado"
+                  }
+                  icon={<CheckCircle className="h-4 w-4" />}
                 />
                 <Kpi
                   label="Operadores"
@@ -434,11 +408,13 @@ export default function HomePage() {
               style={{ boxShadow: "var(--shadow-card)" }}
             >
               <div className="mb-3">
-                <h2 className="text-[18px] font-bold tracking-[-0.01em]">Qualificações</h2>
-                <p className="mt-0.5 text-xs text-[var(--muted-finexy)]">Top 6 no período</p>
+                <h2 className="text-[18px] font-bold tracking-[-0.01em]">Funil de conversão</h2>
+                <p className="mt-0.5 text-xs text-[var(--muted-finexy)]">
+                  Da ligação ao fechamento
+                </p>
               </div>
-              {qualOption && data.top_qualificacoes.length > 0 ? (
-                <ReactECharts option={qualOption} style={{ height: 320 }} />
+              {funnelOption && data.funil.length > 0 ? (
+                <ReactECharts option={funnelOption} style={{ height: 320 }} />
               ) : (
                 <div className="grid h-[320px] place-items-center text-xs text-[var(--muted-finexy)]">
                   Sem dados

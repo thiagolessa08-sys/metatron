@@ -28,11 +28,14 @@ class TopItem(BaseModel):
 class DashboardResult(BaseModel):
     # KPIs
     total_ligacoes: int
+    fechados_total: int
     operadores_unicos: int
     campanhas_unicas: int
     duracao_media_s: int
     duracao_total_s: int
     qualificacoes_unicas: int
+    # Funil de conversão (Total → Localizados → Contatados → Agente Não Tabulou → Negociação → Fechados)
+    funil: list[TopItem]
     # Volume
     volume_diario: list[VolumeDiarioPonto]
     # Rankings

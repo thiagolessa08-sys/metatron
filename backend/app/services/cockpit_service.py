@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 from app.services.sybase_agent import SybaseAgentClient
+from app.services.dashboard_service import _FECHADOS, _in_list
 from app.schemas.cockpit import (
     CockpitResult,
     HeatmapCell,
@@ -67,10 +68,10 @@ async def cockpit_heatmap(
         safe_e = empresa.replace("'", "''")
         where_extra += f" AND empresa = '{safe_e}'"
 
-    # Query única: data + hora → COUNT
-    # DATEPART(hour, hora) agrupa por hora inteira — hora é TIME com precisão de segundos
+    # Query única: data + hora → SUM de fechamentos
     sql = (
-        "SELECT data, DATEPART(hour, hora) AS hora_num, COUNT(*) AS total "
+        f"SELECT data, DATEPART(hour, hora) AS hora_num, "
+        f"SUM(CASE WHEN descricao IN ({_in_list(_FECHADOS)}) THEN 1 ELSE 0 END) AS total "
         "FROM metatron.TT_ACIONAMENTOS_METATRON "
         f"WHERE data BETWEEN '{data_inicio}' AND '{data_fim}'{where_extra} "
         "GROUP BY data, DATEPART(hour, hora)"

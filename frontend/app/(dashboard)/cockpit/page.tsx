@@ -99,7 +99,7 @@ export default function CockpitPage() {
           position: "top",
           formatter: (p: { value: [number, number, number] }) => {
             const [h, ds, v] = p.value
-            return `${DIAS_LABEL[ds]} às ${HORAS_LABEL[h]}: <b>${v.toLocaleString("pt-BR")} ligações</b>`
+            return `${DIAS_LABEL[ds]} às ${HORAS_LABEL[h]}: <b>${v.toLocaleString("pt-BR")} fechamentos</b>`
           },
         },
         grid: { left: 60, right: 20, top: 20, bottom: 60 },
@@ -159,7 +159,7 @@ export default function CockpitPage() {
 
   const turnoOption = data
     ? {
-        tooltip: { trigger: "item", formatter: "{b}: <b>{c} ligações</b>" },
+        tooltip: { trigger: "item", formatter: "{b}: <b>{c} fechamentos</b>" },
         grid: { left: 70, right: 20, top: 10, bottom: 30 },
         xAxis: { type: "value", axisLabel: { fontSize: 10 } },
         yAxis: { type: "category", data: data.por_turno.map((t) => t.nome), axisLabel: { fontSize: 12 } },
@@ -184,7 +184,7 @@ export default function CockpitPage() {
 
   const diaSemanaOption = data
     ? {
-        tooltip: { trigger: "axis", formatter: "{b}: <b>{c} ligações</b>" },
+        tooltip: { trigger: "axis", formatter: "{b}: <b>{c} fechamentos</b>" },
         grid: { left: 50, right: 20, top: 20, bottom: 30 },
         xAxis: {
           type: "category",
@@ -213,7 +213,7 @@ export default function CockpitPage() {
       <div>
         <h1 className="text-[28px] font-bold tracking-[-0.02em]">Cockpit Temporal</h1>
         <p className="mt-1 text-sm text-[var(--muted-finexy)]">
-          Identifique os melhores horários, dias e padrões da operação
+          Identifique os melhores horários, dias e padrões de fechamento
         </p>
       </div>
 
@@ -238,10 +238,10 @@ export default function CockpitPage() {
       {data && !isLoading && data.total_periodo === 0 && (
         <div className="rounded-[22px] border border-dashed border-[var(--line)] bg-white p-12 text-center">
           <p className="text-[var(--muted-finexy)]">
-            Nenhuma ligação encontrada com os filtros atuais.
+            Nenhum fechamento encontrado com os filtros atuais.
           </p>
           <p className="mt-1 text-xs text-[#9a9a9a]">
-            Tente ampliar o período ou remover filtros de campanha/operador.
+            Tente ampliar o período ou remover filtros de campanha/empresa.
           </p>
         </div>
       )}
@@ -255,7 +255,7 @@ export default function CockpitPage() {
               icon={<Sparkles className="h-4 w-4" />}
               label="Total no período"
               value={data.total_periodo.toLocaleString("pt-BR")}
-              hint="Ligações"
+              hint="Fechamentos"
             />
             <Kpi
               icon={<Crown className="h-4 w-4" />}
@@ -273,13 +273,13 @@ export default function CockpitPage() {
               icon={<Clock className="h-4 w-4" />}
               label="Hora de pico"
               value={data.hora_pico !== null ? `${data.hora_pico.toString().padStart(2, "0")}h` : "—"}
-              hint="Maior volume horário"
+              hint="Maior volume de fechamentos"
             />
             <Kpi
               icon={<Trophy className="h-4 w-4" />}
               label="Dia recorde"
               value={formatDate(data.dia_recorde)}
-              hint="Maior volume diário"
+              hint="Maior fechamento diário"
             />
             <Kpi
               icon={<Briefcase className="h-4 w-4" />}
@@ -304,7 +304,7 @@ export default function CockpitPage() {
               <div>
                 <h2 className="text-[18px] font-bold tracking-[-0.01em]">Volume diário</h2>
                 <p className="mt-0.5 text-xs text-[var(--muted-finexy)]">
-                  Evolução de ligações no período selecionado
+                  Evolução de fechamentos no período selecionado
                 </p>
               </div>
             </div>
@@ -318,7 +318,7 @@ export default function CockpitPage() {
                 Mapa de calor — dia da semana × hora
               </h2>
               <p className="mt-0.5 text-xs text-[var(--muted-finexy)]">
-                Cores mais escuras = maior volume de ligações
+                Cores mais escuras = maior volume de fechamentos
               </p>
             </div>
             {heatmapOption && <ReactECharts option={heatmapOption} style={{ height: 320 }} />}
@@ -427,7 +427,7 @@ export default function CockpitPage() {
                       i === 0 ? "text-[#C5EBF7]" : "text-[var(--muted-finexy)]"
                     }`}
                   >
-                    {p.valor.toLocaleString("pt-BR")} ligações
+                    {p.valor.toLocaleString("pt-BR")} fechamentos
                   </p>
                 </div>
               ))}
@@ -523,7 +523,7 @@ function CompareRow({
         />
       </div>
       <p className="text-[10.5px] text-[var(--muted-finexy)]">
-        Média {media.toLocaleString("pt-BR")} por dia · {pct.toFixed(1)}% do total
+        Média {media.toLocaleString("pt-BR")} fechamentos/dia · {pct.toFixed(1)}% do total
       </p>
     </div>
   )

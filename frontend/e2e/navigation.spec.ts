@@ -14,11 +14,10 @@ test.describe("Navegação (gestor autenticado)", () => {
 
   test("sidebar exibe links corretos", async ({ page }) => {
     await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible()
-    await expect(page.getByRole("link", { name: "Operação Agora" })).toBeVisible()
+    await expect(page.getByRole("link", { name: "Cockpit Temporal" })).toBeVisible()
     await expect(page.getByRole("link", { name: "Qualificações" })).toBeVisible()
-    await expect(page.getByRole("link", { name: "Aproveitamento" })).toBeVisible()
     await expect(page.getByRole("link", { name: "Agentes" })).toBeVisible()
-    await expect(page.getByRole("link", { name: "Chamadas" })).toBeVisible()
+    await expect(page.getByRole("link", { name: "Análise de Ligação" })).toBeVisible()
   })
 
   test("navega para /agentes", async ({ page }) => {
@@ -33,16 +32,10 @@ test.describe("Navegação (gestor autenticado)", () => {
     await expect(page.getByText("Qualificações").first()).toBeVisible()
   })
 
-  test("navega para /relatorios/chamadas", async ({ page }) => {
-    await page.getByRole("link", { name: "Chamadas" }).click()
-    await expect(page).toHaveURL(`${BASE}/relatorios/chamadas`)
-    await expect(page.getByRole("heading", { name: "Relatório de Chamadas" })).toBeVisible()
-  })
-
-  test("navega para /operacao", async ({ page }) => {
-    await page.getByRole("link", { name: "Operação Agora" }).click()
-    await expect(page).toHaveURL(`${BASE}/operacao`)
-    await expect(page.getByText("Operação Agora").first()).toBeVisible()
+  test("navega para /relatorios/analise-ligacao", async ({ page }) => {
+    await page.getByRole("link", { name: "Análise de Ligação" }).click()
+    await expect(page).toHaveURL(`${BASE}/relatorios/analise-ligacao`)
+    await expect(page.getByRole("heading", { name: "Análise de Ligação" })).toBeVisible()
   })
 
   test("página 404 para rota inexistente", async ({ page }) => {

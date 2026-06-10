@@ -5,6 +5,8 @@ Devolve resumo+sentimento, qualidade do atendimento e classificação do resulta
 import io
 import json
 import logging
+import os
+import tempfile
 
 from openai import AsyncOpenAI
 from pydub import AudioSegment
@@ -71,29 +73,46 @@ def _client() -> AsyncOpenAI:
     return AsyncOpenAI(api_key=settings.openai_api_key)
 
 
-def _transcodificar_mp3(audio_bytes: bytes) -> tuple[bytes, str]:
+def _transcodificar_mp3(audio_bytes: bytes, filename: str) -> tuple[bytes, str]:
     """
     Converte o áudio para MP3 16kHz mono via ffmpeg (pydub).
     Gravações de telefonia (.WAV mu-law/a-law/GSM) muitas vezes não são
     decodificadas direto pelo Whisper; normalizar resolve.
-    Retorna (bytes, nome). Em caso de falha, devolve o original.
+
+    Usa arquivo temporário em disco (não BytesIO): WAVs de telefonia exigem
+    que o ffmpeg faça seek para localizar o chunk 'data', o que não é
+    possível quando o áudio chega por pipe/stdin.
+
+    Retorna (bytes, nome). Em caso de falha, devolve o original preservando
+    a extensão para que o Whisper ao menos tente decodificar.
     """
+    ext = (os.path.splitext(filename)[1].lstrip(".").lower() or "wav")
+    tmp_in = None
     try:
-        audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
+        with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as f:
+            f.write(audio_bytes)
+            tmp_in = f.name
+        audio = AudioSegment.from_file(tmp_in)
         audio = audio.set_frame_rate(16000).set_channels(1)
         out = io.BytesIO()
         audio.export(out, format="mp3", bitrate="64k")
         return out.getvalue(), "audio.mp3"
     except Exception as e:
         logger.warning("Falha ao transcodificar áudio, usando original: %s", e)
-        return audio_bytes, "audio"
+        return audio_bytes, (filename or "audio.wav")
+    finally:
+        if tmp_in and os.path.exists(tmp_in):
+            try:
+                os.remove(tmp_in)
+            except OSError:
+                pass
 
 
 async def transcrever(audio_bytes: bytes, filename: str) -> str:
     """Transcreve o áudio usando Whisper. Retorna o texto da transcrição."""
     client = _client()
     # Normaliza o formato (telefonia → mp3) para garantir que o Whisper decodifique
-    conv_bytes, conv_name = _transcodificar_mp3(audio_bytes)
+    conv_bytes, conv_name = _transcodificar_mp3(audio_bytes, filename)
     buffer = io.BytesIO(conv_bytes)
     buffer.name = conv_name
     resp = await client.audio.transcriptions.create(

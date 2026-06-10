@@ -8,13 +8,12 @@ import {
   useCallback,
   type ReactNode,
 } from "react"
-import { format, subDays, parseISO } from "date-fns"
+import { format, subDays } from "date-fns"
 
-// PoC: data de referência fixa (último dia com dados na base de teste).
-// Em produção (D-1), trocar por: new Date()
-const REFERENCE_DATE_ISO = "2026-04-01"
+// Data de referência: usa a data real do sistema (produção).
+// Os presets (Hoje, Últimos 7/30/90 dias, Este mês) são calculados a partir daqui.
 function referenceDate(): Date {
-  return parseISO(REFERENCE_DATE_ISO)
+  return new Date()
 }
 
 export type PeriodPreset = "today" | "last7" | "last30" | "last90" | "month" | "custom"

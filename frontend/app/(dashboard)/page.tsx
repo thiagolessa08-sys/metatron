@@ -304,39 +304,44 @@ export default function HomePage() {
       }
     : null
 
-  const fechSemana = data ? fechadosPorDiaSemanaArray(data.volume_diario) : []
-  const fechSemanaMax = fechSemana.reduce((m, v) => Math.max(m, v), 0)
+  // Só dias úteis (Seg–Sex); índices 1..5 do array de dias da semana
+  const fechSemanaArr = data ? fechadosPorDiaSemanaArray(data.volume_diario) : []
+  const fechUteis = data
+    ? [
+        { label: "Seg", value: fechSemanaArr[1] ?? 0 },
+        { label: "Ter", value: fechSemanaArr[2] ?? 0 },
+        { label: "Qua", value: fechSemanaArr[3] ?? 0 },
+        { label: "Qui", value: fechSemanaArr[4] ?? 0 },
+        { label: "Sex", value: fechSemanaArr[5] ?? 0 },
+      ]
+    : []
+  const fechSemanaMax = fechUteis.reduce((m, d) => Math.max(m, d.value), 0)
   const fechSemanaOption = data
     ? {
-        tooltip: {
-          trigger: "axis",
-          axisPointer: { type: "shadow" },
-          valueFormatter: (v: number) => `${(v ?? 0).toLocaleString("pt-BR")} fechamentos`,
-        },
-        grid: { left: 8, right: 16, top: 12, bottom: 4, containLabel: true },
-        xAxis: {
-          type: "category",
-          data: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
-          axisLabel: { fontSize: 11 },
-          axisTick: { show: false },
-        },
+        tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b> fechamentos" },
+        grid: { left: 8, right: 30, top: 10, bottom: 10, containLabel: true },
+        xAxis: { type: "value", axisLabel: { fontSize: 10 } },
         yAxis: {
-          type: "value",
-          axisLabel: { fontSize: 10 },
-          splitLine: { lineStyle: { color: "#f0f0f0" } },
+          type: "category",
+          data: fechUteis.map((d) => d.label).reverse(),
+          axisLabel: { fontSize: 11 },
         },
         series: [
           {
             type: "bar",
-            data: fechSemana.map((v) => ({
-              value: v,
-              itemStyle: { color: v === fechSemanaMax && v > 0 ? "#16A34A" : "#A7E3BE" },
-            })),
-            barMaxWidth: 34,
-            itemStyle: { borderRadius: [6, 6, 0, 0] },
+            data: fechUteis
+              .map((d) => ({
+                value: d.value,
+                itemStyle: {
+                  color: d.value === fechSemanaMax && d.value > 0 ? "#16A34A" : "#A7E3BE",
+                  borderRadius: [0, 8, 8, 0],
+                },
+              }))
+              .reverse(),
+            barMaxWidth: 22,
             label: {
               show: true,
-              position: "top",
+              position: "right",
               fontSize: 10,
               formatter: (p: { value: number }) => p.value.toLocaleString("pt-BR"),
             },

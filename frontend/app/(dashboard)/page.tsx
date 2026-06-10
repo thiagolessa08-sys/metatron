@@ -119,12 +119,12 @@ export default function HomePage() {
         legend: {
           data: ["Total de ligações", "Negociação", "Fechados"],
           top: 0,
-          right: 0,
+          left: "center",
           textStyle: { fontSize: 11 },
           itemWidth: 14,
           itemHeight: 8,
         },
-        grid: { left: 50, right: 52, top: 32, bottom: 36 },
+        grid: { left: 50, right: 52, top: 40, bottom: 36 },
         xAxis: {
           type: "category",
           data: data.volume_diario.map((d) => {
@@ -145,6 +145,7 @@ export default function HomePage() {
             name: "Ligações",
             nameTextStyle: { fontSize: 10, color: "#9a9a9a" },
             axisLabel: { fontSize: 10 },
+            splitLine: { show: true, lineStyle: { color: "#f0f0f0" } },
           },
           {
             type: "value",
@@ -152,7 +153,9 @@ export default function HomePage() {
             nameTextStyle: { fontSize: 10, color: "#9a9a9a" },
             position: "right",
             axisLabel: { fontSize: 10 },
-            splitLine: { show: false },
+            // Gridlines também aqui: ao esconder o "Total", o eixo esquerdo
+            // colapsa, mas as linhas continuam vindas deste eixo (mesma posição).
+            splitLine: { show: true, lineStyle: { color: "#f0f0f0" } },
           },
         ],
         series: [

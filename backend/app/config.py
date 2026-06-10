@@ -34,11 +34,6 @@ class Settings(BaseSettings):
     # Anthropic (chat NL→SQL)
     anthropic_api_key: str = ""
 
-    # OpenAI (análise de ligação: Whisper + GPT)
-    openai_api_key: str = ""
-    openai_transcribe_model: str = "whisper-1"
-    openai_analysis_model: str = "gpt-4o-mini"
-
     # CORS
     cors_origins: str = "http://localhost:3000"
 

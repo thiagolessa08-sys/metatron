@@ -192,15 +192,22 @@ async def dashboard_executive(
 
     # === 6) Volume diário ===
     sql_volume = (
-        "SELECT data, COUNT(*) AS total "
+        "SELECT data, COUNT(*) AS total, "
+        f"SUM(CASE WHEN descricao IN ({_in_list(_NEGOCIACAO)}) THEN 1 ELSE 0 END) AS negociacao, "
+        f"SUM(CASE WHEN descricao IN ({_in_list(_FECHADOS)}) THEN 1 ELSE 0 END) AS fechados "
         f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where} "
         "GROUP BY data ORDER BY data"
     )
     volume_raw = await _try_query(agent, sql_volume, limit=400)
     volume_diario = [
-        VolumeDiarioPonto(data=str(r[0]).strip()[:10], total=_safe_int(r[1]))
+        VolumeDiarioPonto(
+            data=str(r[0]).strip()[:10],
+            total=_safe_int(r[1]),
+            negociacao=_safe_int(r[2]),
+            fechados=_safe_int(r[3]),
+        )
         for r in volume_raw.get("rows", [])
-        if len(r) >= 2 and r[0] is not None
+        if len(r) >= 4 and r[0] is not None
     ]
 
     # === 7) Top qualificações ===

@@ -18,6 +18,8 @@ class DashboardQuery(BaseModel):
 class VolumeDiarioPonto(BaseModel):
     data: str
     total: int
+    negociacao: int = 0
+    fechados: int = 0
 
 
 class TopItem(BaseModel):

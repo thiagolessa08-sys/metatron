@@ -34,6 +34,8 @@ interface DateRangeResult {
 interface VolumeDiarioPonto {
   data: string
   total: number
+  negociacao: number
+  fechados: number
 }
 interface TopItem {
   nome: string
@@ -110,8 +112,19 @@ export default function HomePage() {
   // === ECharts options ===
   const volumeOption = data
     ? {
-        tooltip: { trigger: "axis" },
-        grid: { left: 50, right: 20, top: 8, bottom: 36 },
+        tooltip: {
+          trigger: "axis",
+          valueFormatter: (v: number) => (v ?? 0).toLocaleString("pt-BR"),
+        },
+        legend: {
+          data: ["Total de ligações", "Negociação", "Fechados"],
+          top: 0,
+          right: 0,
+          textStyle: { fontSize: 11 },
+          itemWidth: 14,
+          itemHeight: 8,
+        },
+        grid: { left: 50, right: 52, top: 32, bottom: 36 },
         xAxis: {
           type: "category",
           data: data.volume_diario.map((d) => {
@@ -126,17 +139,56 @@ export default function HomePage() {
             rotate: data.volume_diario.length > 30 ? 45 : 0,
           },
         },
-        yAxis: { type: "value", axisLabel: { fontSize: 10 } },
+        yAxis: [
+          {
+            type: "value",
+            name: "Ligações",
+            nameTextStyle: { fontSize: 10, color: "#9a9a9a" },
+            axisLabel: { fontSize: 10 },
+          },
+          {
+            type: "value",
+            name: "Neg. / Fech.",
+            nameTextStyle: { fontSize: 10, color: "#9a9a9a" },
+            position: "right",
+            axisLabel: { fontSize: 10 },
+            splitLine: { show: false },
+          },
+        ],
         series: [
           {
+            name: "Total de ligações",
             type: "line",
             smooth: true,
+            yAxisIndex: 0,
             data: data.volume_diario.map((d) => d.total),
             itemStyle: { color: "#4DC3E8" },
             lineStyle: { width: 2.5 },
             areaStyle: { color: "rgba(77,195,232,0.12)" },
             symbol: "circle",
             symbolSize: 5,
+          },
+          {
+            name: "Negociação",
+            type: "line",
+            smooth: true,
+            yAxisIndex: 1,
+            data: data.volume_diario.map((d) => d.negociacao),
+            itemStyle: { color: "#1784AD" },
+            lineStyle: { width: 2 },
+            symbol: "circle",
+            symbolSize: 4,
+          },
+          {
+            name: "Fechados",
+            type: "line",
+            smooth: true,
+            yAxisIndex: 1,
+            data: data.volume_diario.map((d) => d.fechados),
+            itemStyle: { color: "#16A34A" },
+            lineStyle: { width: 2 },
+            symbol: "circle",
+            symbolSize: 4,
           },
         ],
       }

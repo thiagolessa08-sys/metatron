@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Trophy,
   Users,
-  XCircle,
   Calendar,
 } from "lucide-react"
 import api from "@/lib/api"
@@ -20,12 +19,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { format, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
-interface HealthFull {
-  status: string
-  service: string
-  agent: string
-  agent_url: string
-}
 interface DateRangeResult {
   min_data: string | null
   max_data: string | null
@@ -106,14 +99,6 @@ export default function HomePage() {
     queryFn: async () => (await api.get("/api/dashboard/date-range")).data,
     staleTime: 5 * 60_000,
   })
-
-  const { data: health, isLoading: healthLoading } = useQuery<HealthFull>({
-    queryKey: ["health-full"],
-    queryFn: () => api.get("/health/full").then((r) => r.data),
-    refetchInterval: 30_000,
-  })
-
-  const agentOk = health?.agent === "ok"
 
   // === ECharts options ===
   const volumeOption = data
@@ -311,6 +296,47 @@ export default function HomePage() {
             label: {
               show: true,
               position: "right",
+              fontSize: 10,
+              formatter: (p: { value: number }) => p.value.toLocaleString("pt-BR"),
+            },
+          },
+        ],
+      }
+    : null
+
+  const fechSemana = data ? fechadosPorDiaSemanaArray(data.volume_diario) : []
+  const fechSemanaMax = fechSemana.reduce((m, v) => Math.max(m, v), 0)
+  const fechSemanaOption = data
+    ? {
+        tooltip: {
+          trigger: "axis",
+          axisPointer: { type: "shadow" },
+          valueFormatter: (v: number) => `${(v ?? 0).toLocaleString("pt-BR")} fechamentos`,
+        },
+        grid: { left: 8, right: 16, top: 12, bottom: 4, containLabel: true },
+        xAxis: {
+          type: "category",
+          data: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
+          axisLabel: { fontSize: 11 },
+          axisTick: { show: false },
+        },
+        yAxis: {
+          type: "value",
+          axisLabel: { fontSize: 10 },
+          splitLine: { lineStyle: { color: "#f0f0f0" } },
+        },
+        series: [
+          {
+            type: "bar",
+            data: fechSemana.map((v) => ({
+              value: v,
+              itemStyle: { color: v === fechSemanaMax && v > 0 ? "#16A34A" : "#A7E3BE" },
+            })),
+            barMaxWidth: 34,
+            itemStyle: { borderRadius: [6, 6, 0, 0] },
+            label: {
+              show: true,
+              position: "top",
               fontSize: 10,
               formatter: (p: { value: number }) => p.value.toLocaleString("pt-BR"),
             },
@@ -553,24 +579,14 @@ export default function HomePage() {
               className="rounded-[22px] bg-white p-5"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <h2 className="mb-3 text-[18px] font-bold tracking-[-0.01em]">Infraestrutura</h2>
-              <div className="flex flex-col gap-2.5">
-                <StatusRow
-                  label="API Backend"
-                  loading={healthLoading}
-                  ok={health?.status === "ok"}
-                  detail={health?.status === "ok" ? "Online" : "Indisponível"}
-                />
-                <StatusRow
-                  label="Sybase IQ Agent"
-                  loading={healthLoading}
-                  ok={agentOk}
-                  detail={agentOk ? "Conectado" : "Desconectado"}
-                />
-              </div>
-              {!agentOk && !healthLoading && (
-                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-                  ⚠️ Java Agent inacessível.
+              <h2 className="mb-3 text-[18px] font-bold tracking-[-0.01em]">
+                Fechamentos por dia da semana
+              </h2>
+              {fechSemanaOption && fechSemanaMax > 0 ? (
+                <ReactECharts option={fechSemanaOption} style={{ height: 240 }} />
+              ) : (
+                <div className="grid h-[240px] place-items-center text-xs text-[var(--muted-finexy)]">
+                  Nenhum fechamento no período
                 </div>
               )}
             </div>
@@ -616,19 +632,23 @@ const DIAS_SEMANA = [
   "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado",
 ]
 
-/** Soma fechados por dia da semana e retorna o dia campeão. */
-function diaSemanaQueMaisFechou(
-  volume: VolumeDiarioPonto[]
-): { dia: string; total: number } | null {
+/** Soma os fechados por dia da semana (índice 0=Domingo … 6=Sábado). */
+function fechadosPorDiaSemanaArray(volume: VolumeDiarioPonto[]): number[] {
   const acc: number[] = [0, 0, 0, 0, 0, 0, 0]
-  let temFechamento = false
   for (const d of volume) {
     const dt = parseISO(d.data)
     if (Number.isNaN(dt.getTime())) continue
     acc[dt.getDay()] += d.fechados
-    if (d.fechados > 0) temFechamento = true
   }
-  if (!temFechamento) return null
+  return acc
+}
+
+/** Soma fechados por dia da semana e retorna o dia campeão. */
+function diaSemanaQueMaisFechou(
+  volume: VolumeDiarioPonto[]
+): { dia: string; total: number } | null {
+  const acc = fechadosPorDiaSemanaArray(volume)
+  if (acc.every((v) => v === 0)) return null
   let bestWd = 0
   for (let i = 1; i < 7; i++) if (acc[i] > acc[bestWd]) bestWd = i
   return { dia: DIAS_SEMANA[bestWd], total: acc[bestWd] }
@@ -785,40 +805,3 @@ function Kpi({
   )
 }
 
-function StatusRow({
-  label,
-  loading,
-  ok,
-  detail,
-}: {
-  label: string
-  loading?: boolean
-  ok: boolean
-  detail: string
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-[var(--line-2)] px-3 py-2">
-      <div className="flex items-center gap-2">
-        {loading ? (
-          <Skeleton className="h-4 w-4 rounded-full" />
-        ) : ok ? (
-          <CheckCircle className="h-4 w-4 text-green-600" />
-        ) : (
-          <XCircle className="h-4 w-4 text-red-500" />
-        )}
-        <span className="text-sm font-semibold">{label}</span>
-      </div>
-      {loading ? (
-        <Skeleton className="h-5 w-16" />
-      ) : (
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-            ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-          }`}
-        >
-          {detail}
-        </span>
-      )}
-    </div>
-  )
-}

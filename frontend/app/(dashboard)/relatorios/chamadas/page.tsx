@@ -1,484 +1,367 @@
 "use client"
-import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
-import ReactECharts from "echarts-for-react"
-import { ExportButton } from "@/components/relatorios/export-button"
-import { Skeleton } from "@/components/ui/skeleton"
+import { useRef, useState, type DragEvent } from "react"
 import api from "@/lib/api"
-import { useFilters } from "@/lib/filters-context"
 import {
-  Phone,
-  DollarSign,
-  Clock,
-  Building2,
-  TrendingUp,
-  LayoutDashboard,
-  List,
+  UploadCloud,
+  FileAudio,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Smile,
+  Meh,
+  Frown,
+  Gauge,
+  Tag,
+  RotateCcw,
+  ChevronDown,
 } from "lucide-react"
 
-interface ChamadaItem {
-  data_hora: string
-  numero: string
-  operadora: string
-  resultado: string
-  duracao: string
-  dur_min: string
-  valor: string
+interface ChecklistItem {
+  item: string
+  atendido: boolean
+  observacao: string | null
 }
-interface ChamadasResult {
-  items: ChamadaItem[]
-  total: number
-  truncated: boolean
+interface Qualidade {
+  nota: number
+  resumo_avaliacao: string
+  checklist: ChecklistItem[]
 }
-interface FaixaDuracao {
-  faixa: string
-  total: number
-}
-interface HoraBucket {
-  hora: number
-  total: number
-}
-interface OperadoraBucket {
-  nome: string
-  total: number
-}
-interface ChamadasResumo {
-  total: number
-  duracao_total_s: number
-  duracao_media_s: number
-  custo_total: number
-  custo_medio: number
-  operadora_dominante: string | null
-  pct_longas: number
-  por_duracao: FaixaDuracao[]
-  por_hora: HoraBucket[]
-  por_operadora: OperadoraBucket[]
+interface AnaliseResult {
+  transcricao: string
+  duracao_estimada_s: number
+  resumo: string
+  sentimento: "positivo" | "neutro" | "negativo"
+  sentimento_justificativa: string
+  qualidade: Qualidade
+  classificacao: string
+  classificacao_justificativa: string
+  modelo_transcricao: string
+  modelo_analise: string
 }
 
-const PALETA = ["#4DC3E8", "#111111", "#f4a51b", "#16a34a", "#8a8a8a", "#3a8df0", "#e23b3b", "#ff9966"]
+const EXTENSOES = ".mp3,.mp4,.mpeg,.mpga,.m4a,.wav,.webm,.ogg"
 
-function fmtSeg(s: number): string {
+function fmtDuracao(s: number): string {
   if (!s) return "—"
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
+  const m = Math.floor(s / 60)
   const sec = s % 60
-  if (h > 0) return `${h}h ${m}min`
-  if (m > 0) return `${m}m ${sec.toString().padStart(2, "0")}s`
-  return `${sec}s`
+  return m > 0 ? `~${m}min ${sec}s` : `~${sec}s`
 }
 
-function fmtBRL(v: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 2,
-  }).format(v)
+function sentimentoCfg(s: string) {
+  switch (s) {
+    case "positivo":
+      return { label: "Positivo", bg: "#dcfce7", text: "#16a34a", Icon: Smile }
+    case "negativo":
+      return { label: "Negativo", bg: "#fee2e2", text: "#dc2626", Icon: Frown }
+    default:
+      return { label: "Neutro", bg: "#f3f4f6", text: "#6b7280", Icon: Meh }
+  }
 }
 
-function resultadoCor(resultado: string): { bg: string; text: string } {
-  const r = resultado.toLowerCase()
-  if (r.includes("atend") || r.includes("contato")) return { bg: "#dcfce7", text: "#16a34a" }
-  if (r.includes("ocup") || r.includes("não atend") || r.includes("nao atend"))
-    return { bg: "#fee2e2", text: "#dc2626" }
+function classificacaoCfg(c: string): { bg: string; text: string } {
+  const k = c.toLowerCase()
+  if (k.includes("fechad")) return { bg: "#dcfce7", text: "#15803d" }
+  if (k.includes("negocia")) return { bg: "#dbeafe", text: "#1d4ed8" }
+  if (k.includes("agend")) return { bg: "#ede9fe", text: "#6d28d9" }
+  if (k.includes("sem interesse") || k.includes("não localiz") || k.includes("sem contato"))
+    return { bg: "#fee2e2", text: "#b91c1c" }
   return { bg: "#f3f4f6", text: "#6b7280" }
 }
 
-export default function ChamadasPage() {
-  const { period, operador, empresa } = useFilters()
-  const [tab, setTab] = useState<"visao" | "lista">("visao")
+function notaCor(nota: number): string {
+  if (nota >= 8) return "#16a34a"
+  if (nota >= 5) return "#d97706"
+  return "#dc2626"
+}
 
-  const body = {
-    data_inicio: period.dataInicio,
-    data_fim: period.dataFim,
-    operadora: undefined,
-    resultado: undefined,
-    operador: operador ?? undefined,
-    empresa: empresa ?? undefined,
+export default function AnaliseLigacaoPage() {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [arquivo, setArquivo] = useState<File | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const [processando, setProcessando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const [resultado, setResultado] = useState<AnaliseResult | null>(null)
+  const [transcricaoAberta, setTranscricaoAberta] = useState(false)
+
+  function escolherArquivo(f: File | null) {
+    if (!f) return
+    setArquivo(f)
+    setErro(null)
+    setResultado(null)
   }
 
-  const { data: resumo, isLoading: resumoLoading } = useQuery<ChamadasResumo>({
-    queryKey: ["chamadas-resumo", body],
-    queryFn: async () => (await api.post("/api/agentes/chamadas/resumo", body)).data,
-    enabled: tab === "visao",
-  })
+  function onDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setDragOver(false)
+    escolherArquivo(e.dataTransfer.files?.[0] ?? null)
+  }
 
-  const { data: lista, isLoading: listaLoading } = useQuery<ChamadasResult>({
-    queryKey: ["chamadas", body],
-    queryFn: async () => (await api.post("/api/agentes/chamadas", body)).data,
-    enabled: tab === "lista",
-  })
+  async function analisar() {
+    if (!arquivo) return
+    setProcessando(true)
+    setErro(null)
+    setResultado(null)
+    try {
+      const form = new FormData()
+      form.append("file", arquivo)
+      const { data } = await api.post<AnaliseResult>("/api/analise-ligacao", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 180000,
+      })
+      setResultado(data)
+    } catch (e) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setErro(detail ?? (e instanceof Error ? e.message : "Falha ao analisar a ligação."))
+    } finally {
+      setProcessando(false)
+    }
+  }
 
-  // === ECharts ===
-  const histOption = resumo
-    ? {
-        tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b>" },
-        grid: { left: 50, right: 20, top: 20, bottom: 30 },
-        xAxis: {
-          type: "category",
-          data: resumo.por_duracao.map((f) => f.faixa),
-          axisLabel: { fontSize: 11 },
-        },
-        yAxis: { type: "value", axisLabel: { fontSize: 10 } },
-        series: [
-          {
-            type: "bar",
-            data: resumo.por_duracao.map((f, i) => ({
-              value: f.total,
-              itemStyle: { color: PALETA[i % PALETA.length], borderRadius: [8, 8, 0, 0] },
-            })),
-            barMaxWidth: 40,
-            label: {
-              show: true,
-              position: "top",
-              fontSize: 10,
-              formatter: (p: { value: number }) => p.value.toLocaleString("pt-BR"),
-            },
-          },
-        ],
-      }
-    : null
-
-  const horaOption = resumo
-    ? {
-        tooltip: { trigger: "axis", formatter: (p: { name: string; value: number }[]) =>
-          `<b>${p[0].name}h</b>: ${p[0].value.toLocaleString("pt-BR")} chamadas` },
-        grid: { left: 50, right: 20, top: 20, bottom: 30 },
-        xAxis: {
-          type: "category",
-          data: resumo.por_hora.map((h) => h.hora.toString().padStart(2, "0")),
-          axisLabel: { fontSize: 10 },
-        },
-        yAxis: { type: "value", axisLabel: { fontSize: 10 } },
-        series: [
-          {
-            type: "bar",
-            data: resumo.por_hora.map((h) => h.total),
-            itemStyle: { color: "#4DC3E8", borderRadius: [6, 6, 0, 0] },
-            barMaxWidth: 16,
-          },
-        ],
-      }
-    : null
-
-  const operadoraOption = resumo
-    ? {
-        tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b> ({d}%)" },
-        legend: {
-          orient: "vertical",
-          right: 0,
-          top: "center",
-          type: "scroll",
-          textStyle: { fontSize: 11 },
-        },
-        series: [
-          {
-            type: "pie",
-            radius: ["48%", "72%"],
-            center: ["35%", "50%"],
-            data: resumo.por_operadora.map((o, i) => ({
-              name: o.nome,
-              value: o.total,
-              itemStyle: { color: PALETA[i % PALETA.length] },
-            })),
-            label: { show: false },
-            labelLine: { show: false },
-          },
-        ],
-      }
-    : null
+  function recomeçar() {
+    setArquivo(null)
+    setResultado(null)
+    setErro(null)
+    setTranscricaoAberta(false)
+    if (inputRef.current) inputRef.current.value = ""
+  }
 
   return (
     <div className="flex flex-col gap-5 pb-4">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] font-bold tracking-[-0.02em]">Chamadas</h1>
-          <p className="mt-1 text-sm text-[var(--muted-finexy)]">
-            Volume, duração, custo e operadoras
-          </p>
-        </div>
-        <ExportButton endpoint="/api/agentes/chamadas" body={body} filename="chamadas" />
+      <div>
+        <h1 className="text-[28px] font-bold tracking-[-0.02em]">Análise de Ligação</h1>
+        <p className="mt-1 text-sm text-[var(--muted-finexy)]">
+          Faça upload do áudio de uma ligação e deixe a IA transcrever e avaliar
+        </p>
       </div>
 
-      {/* Tabs */}
-      <div className="inline-flex items-center gap-1 self-start rounded-full bg-white p-1" style={{ boxShadow: "var(--shadow-card)" }}>
-        <TabButton active={tab === "visao"} onClick={() => setTab("visao")}>
-          <LayoutDashboard className="h-3.5 w-3.5" />
-          Visão
-        </TabButton>
-        <TabButton active={tab === "lista"} onClick={() => setTab("lista")}>
-          <List className="h-3.5 w-3.5" />
-          Lista
-        </TabButton>
-      </div>
-
-      {/* ===== TAB VISÃO ===== */}
-      {tab === "visao" && (
-        <>
-          {resumoLoading && (
-            <div className="space-y-4">
-              <Skeleton className="h-28 w-full rounded-[22px]" />
-              <Skeleton className="h-96 w-full rounded-[22px]" />
-            </div>
-          )}
-
-          {resumo && !resumoLoading && resumo.total === 0 && (
-            <div className="rounded-[22px] border border-dashed border-[var(--line)] bg-white p-12 text-center text-[var(--muted-finexy)]">
-              Nenhuma chamada encontrada com os filtros atuais.
-            </div>
-          )}
-
-          {resumo && !resumoLoading && resumo.total > 0 && (
-            <>
-              {/* KPIs */}
-              <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-                <Kpi
-                  highlight
-                  label="Total"
-                  value={resumo.total.toLocaleString("pt-BR")}
-                  hint="Chamadas"
-                  icon={<Phone className="h-4 w-4" />}
-                />
-                <Kpi
-                  label="Custo total"
-                  value={fmtBRL(resumo.custo_total)}
-                  hint="No período"
-                  icon={<DollarSign className="h-4 w-4" />}
-                  valueSize="sm"
-                />
-                <Kpi
-                  label="Custo médio"
-                  value={fmtBRL(resumo.custo_medio)}
-                  hint="Por chamada"
-                  icon={<DollarSign className="h-4 w-4" />}
-                  valueSize="sm"
-                />
-                <Kpi
-                  label="Duração média"
-                  value={fmtSeg(resumo.duracao_media_s)}
-                  hint={`Total: ${fmtSeg(resumo.duracao_total_s)}`}
-                  icon={<Clock className="h-4 w-4" />}
-                  valueSize="sm"
-                />
-                <Kpi
-                  label="Operadora top"
-                  value={resumo.operadora_dominante ?? "—"}
-                  hint="Dominante no período"
-                  icon={<Building2 className="h-4 w-4" />}
-                  valueSize="sm"
-                />
-                <Kpi
-                  label="Chamadas longas"
-                  value={`${resumo.pct_longas}%`}
-                  hint="Acima de 2 min"
-                  icon={<TrendingUp className="h-4 w-4" />}
-                />
-              </section>
-
-              {/* Histograma + Hora */}
-              <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div
-                  className="rounded-[22px] bg-white p-5"
-                  style={{ boxShadow: "var(--shadow-card)" }}
-                >
-                  <h2 className="mb-1 text-[18px] font-bold tracking-[-0.01em]">
-                    Duração das chamadas
-                  </h2>
-                  <p className="mb-3 text-xs text-[var(--muted-finexy)]">
-                    Distribuição por faixas de tempo
-                  </p>
-                  {histOption && <ReactECharts option={histOption} style={{ height: 260 }} />}
-                </div>
-                <div
-                  className="rounded-[22px] bg-white p-5"
-                  style={{ boxShadow: "var(--shadow-card)" }}
-                >
-                  <h2 className="mb-1 text-[18px] font-bold tracking-[-0.01em]">
-                    Volume por hora
-                  </h2>
-                  <p className="mb-3 text-xs text-[var(--muted-finexy)]">
-                    Padrão horário das chamadas
-                  </p>
-                  {horaOption && <ReactECharts option={horaOption} style={{ height: 260 }} />}
-                </div>
-              </section>
-
-              {/* Operadora */}
-              <section
-                className="rounded-[22px] bg-white p-5"
-                style={{ boxShadow: "var(--shadow-card)" }}
-              >
-                <h2 className="mb-1 text-[18px] font-bold tracking-[-0.01em]">Mix por operadora</h2>
-                <p className="mb-3 text-xs text-[var(--muted-finexy)]">
-                  Distribuição de chamadas entre operadoras (top 10)
+      {/* ===== Upload ===== */}
+      {!resultado && (
+        <section className="rounded-[22px] bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => !processando && inputRef.current?.click()}
+            onKeyDown={(e) => {
+              if ((e.key === "Enter" || e.key === " ") && !processando) inputRef.current?.click()
+            }}
+            onDragOver={(e) => {
+              e.preventDefault()
+              if (!processando) setDragOver(true)
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => !processando && onDrop(e)}
+            className={`flex flex-col items-center justify-center gap-3 rounded-[18px] border-2 border-dashed px-6 py-12 text-center transition-colors ${
+              processando
+                ? "cursor-not-allowed opacity-60"
+                : "cursor-pointer hover:border-[var(--orange)]"
+            } ${dragOver ? "border-[var(--orange)] bg-[#fff7ec]" : "border-[var(--line)]"}`}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept={EXTENSOES}
+              className="hidden"
+              onChange={(e) => escolherArquivo(e.target.files?.[0] ?? null)}
+            />
+            {arquivo ? (
+              <>
+                <FileAudio className="h-10 w-10 text-[var(--orange)]" />
+                <p className="text-[15px] font-semibold">{arquivo.name}</p>
+                <p className="text-xs text-[var(--muted-finexy)]">
+                  {(arquivo.size / 1024 / 1024).toFixed(1)} MB · clique para trocar
                 </p>
-                {operadoraOption && resumo.por_operadora.length > 0 ? (
-                  <ReactECharts option={operadoraOption} style={{ height: 320 }} />
-                ) : (
-                  <div className="grid h-[200px] place-items-center text-xs text-[var(--muted-finexy)]">
-                    Sem dados de operadora
-                  </div>
-                )}
-              </section>
-            </>
+              </>
+            ) : (
+              <>
+                <UploadCloud className="h-10 w-10 text-[var(--muted-finexy)]" />
+                <p className="text-[15px] font-semibold">
+                  Arraste o áudio aqui ou clique para selecionar
+                </p>
+                <p className="text-xs text-[var(--muted-finexy)]">
+                  MP3, WAV, M4A, OGG, WEBM · até 25 MB
+                </p>
+              </>
+            )}
+          </div>
+
+          {erro && (
+            <div className="mt-4 flex items-start gap-2 rounded-[14px] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{erro}</span>
+            </div>
           )}
-        </>
+
+          <div className="mt-4 flex items-center justify-end gap-2">
+            {arquivo && !processando && (
+              <button
+                type="button"
+                onClick={recomeçar}
+                className="rounded-full px-4 py-2 text-[13px] font-semibold text-[var(--muted-finexy)] transition-colors hover:text-[var(--ink)]"
+              >
+                Limpar
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={analisar}
+              disabled={!arquivo || processando}
+              className="inline-flex items-center gap-2 rounded-full bg-[#111] px-5 py-2 text-[13px] font-semibold text-white transition-opacity disabled:opacity-40"
+            >
+              {processando ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Analisando…
+                </>
+              ) : (
+                "Analisar ligação"
+              )}
+            </button>
+          </div>
+
+          {processando && (
+            <p className="mt-3 text-center text-xs text-[var(--muted-finexy)]">
+              Transcrevendo o áudio e avaliando o atendimento. Pode levar até 1 minuto.
+            </p>
+          )}
+        </section>
       )}
 
-      {/* ===== TAB LISTA ===== */}
-      {tab === "lista" && (
+      {/* ===== Resultado ===== */}
+      {resultado && (
         <>
-          {listaLoading && <Skeleton className="h-96 w-full rounded-[22px]" />}
-          {lista && !listaLoading && (
-            <div
-              className="rounded-[22px] bg-white p-5"
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-[var(--muted-finexy)]">
+              {arquivo?.name} · {fmtDuracao(resultado.duracao_estimada_s)}
+            </p>
+            <button
+              type="button"
+              onClick={recomeçar}
+              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[13px] font-semibold transition-colors hover:text-[var(--orange)]"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm text-[var(--muted-finexy)]">
-                  Mostrando <b>{lista.items.length}</b> de{" "}
-                  <b>{lista.total.toLocaleString("pt-BR")}</b> registros
-                  {lista.truncated && " (truncado a 1.000)"}
-                </p>
+              <RotateCcw className="h-3.5 w-3.5" />
+              Analisar outra
+            </button>
+          </div>
+
+          {/* Cards de topo */}
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {/* Classificação */}
+            <div className="rounded-[22px] bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+              <div className="flex items-center gap-2 text-[12px] font-medium text-[var(--muted-finexy)]">
+                <Tag className="h-4 w-4" />
+                Resultado da ligação
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--line-2)] bg-[#fafafa]">
-                      <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                        Data/Hora
-                      </th>
-                      <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                        Número
-                      </th>
-                      <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                        Operadora
-                      </th>
-                      <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                        Resultado
-                      </th>
-                      <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                        Duração
-                      </th>
-                      <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#9a9a9a]">
-                        Valor
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lista.items.map((row, i) => {
-                      const cor = resultadoCor(row.resultado)
-                      return (
-                        <tr key={i} className="border-b border-[var(--line-2)] last:border-b-0">
-                          <td className="px-3 py-2 text-[12.5px]">{row.data_hora}</td>
-                          <td className="px-3 py-2 font-mono text-[12.5px]">{row.numero}</td>
-                          <td className="px-3 py-2 text-[12.5px]">{row.operadora}</td>
-                          <td className="px-3 py-2">
-                            <span
-                              className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                              style={{ background: cor.bg, color: cor.text }}
-                            >
-                              {row.resultado}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums">{row.dur_min || row.duracao}</td>
-                          <td className="px-3 py-2 text-right tabular-nums">{row.valor}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <span
+                className="mt-3 inline-flex rounded-full px-3 py-1 text-[15px] font-bold"
+                style={{
+                  background: classificacaoCfg(resultado.classificacao).bg,
+                  color: classificacaoCfg(resultado.classificacao).text,
+                }}
+              >
+                {resultado.classificacao}
+              </span>
+              <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted-finexy)]">
+                {resultado.classificacao_justificativa}
+              </p>
             </div>
-          )}
+
+            {/* Sentimento */}
+            {(() => {
+              const cfg = sentimentoCfg(resultado.sentimento)
+              return (
+                <div className="rounded-[22px] bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <div className="flex items-center gap-2 text-[12px] font-medium text-[var(--muted-finexy)]">
+                    <cfg.Icon className="h-4 w-4" />
+                    Sentimento do cliente
+                  </div>
+                  <span
+                    className="mt-3 inline-flex rounded-full px-3 py-1 text-[15px] font-bold"
+                    style={{ background: cfg.bg, color: cfg.text }}
+                  >
+                    {cfg.label}
+                  </span>
+                  <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted-finexy)]">
+                    {resultado.sentimento_justificativa}
+                  </p>
+                </div>
+              )
+            })()}
+
+            {/* Nota de qualidade */}
+            <div className="rounded-[22px] bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+              <div className="flex items-center gap-2 text-[12px] font-medium text-[var(--muted-finexy)]">
+                <Gauge className="h-4 w-4" />
+                Qualidade do atendimento
+              </div>
+              <p className="mt-3 text-[34px] font-bold leading-none tracking-[-0.02em]">
+                <span style={{ color: notaCor(resultado.qualidade.nota) }}>
+                  {resultado.qualidade.nota.toFixed(1)}
+                </span>
+                <span className="text-[16px] text-[var(--muted-finexy)]"> / 10</span>
+              </p>
+              <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted-finexy)]">
+                {resultado.qualidade.resumo_avaliacao}
+              </p>
+            </div>
+          </section>
+
+          {/* Resumo */}
+          <section className="rounded-[22px] bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+            <h2 className="mb-2 text-[18px] font-bold tracking-[-0.01em]">Resumo da ligação</h2>
+            <p className="text-[14px] leading-relaxed text-[var(--ink)]">{resultado.resumo}</p>
+          </section>
+
+          {/* Checklist de qualidade */}
+          <section className="rounded-[22px] bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+            <h2 className="mb-3 text-[18px] font-bold tracking-[-0.01em]">
+              Checklist do atendimento
+            </h2>
+            <ul className="flex flex-col gap-2.5">
+              {resultado.qualidade.checklist.map((c, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  {c.atendido ? (
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                  ) : (
+                    <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                  )}
+                  <div>
+                    <p className="text-[14px] font-medium">{c.item}</p>
+                    {c.observacao && (
+                      <p className="text-[12px] text-[var(--muted-finexy)]">{c.observacao}</p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Transcrição (expansível) */}
+          <section className="rounded-[22px] bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+            <button
+              type="button"
+              onClick={() => setTranscricaoAberta((v) => !v)}
+              className="flex w-full items-center justify-between"
+            >
+              <h2 className="text-[18px] font-bold tracking-[-0.01em]">Transcrição completa</h2>
+              <ChevronDown
+                className={`h-5 w-5 text-[var(--muted-finexy)] transition-transform ${
+                  transcricaoAberta ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {transcricaoAberta && (
+              <p className="mt-3 whitespace-pre-wrap text-[13px] leading-relaxed text-[var(--ink)]">
+                {resultado.transcricao}
+              </p>
+            )}
+          </section>
+
+          <p className="text-center text-[11px] text-[#bdbdbd]">
+            Transcrição: {resultado.modelo_transcricao} · Análise: {resultado.modelo_analise}
+          </p>
         </>
-      )}
-    </div>
-  )
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${
-        active
-          ? "bg-[#111] text-white"
-          : "text-[var(--muted-finexy)] hover:text-[var(--ink)]"
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function Kpi({
-  label,
-  value,
-  hint,
-  icon,
-  highlight = false,
-  valueSize = "default",
-}: {
-  label: string
-  value: string
-  hint?: string
-  icon?: React.ReactNode
-  highlight?: boolean
-  valueSize?: "default" | "sm"
-}) {
-  return (
-    <div
-      className={`relative overflow-hidden rounded-[22px] p-4 ${
-        highlight ? "text-white" : "bg-white text-[var(--ink)]"
-      }`}
-      style={{
-        background: highlight ? "linear-gradient(180deg, #4DC3E8 0%, #28ACDB 100%)" : undefined,
-        boxShadow: "var(--shadow-card)",
-      }}
-    >
-      {highlight && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-6 -right-6 h-24 w-24 rounded-full"
-          style={{
-            background: "radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%)",
-          }}
-        />
-      )}
-      <div className="relative flex items-center justify-between text-[12px] font-medium">
-        <span className={highlight ? "text-[#D0F0FA]" : "text-[var(--muted-finexy)]"}>{label}</span>
-        <span
-          className={`grid h-5 w-5 place-items-center rounded-full ${
-            highlight ? "bg-white/20" : "bg-[#f3f3f3] text-[#bdbdbd]"
-          }`}
-        >
-          {icon}
-        </span>
-      </div>
-      <p
-        className={`relative mt-2 truncate font-bold tracking-[-0.01em] ${
-          valueSize === "sm" ? "text-[15px]" : "text-[22px]"
-        }`}
-      >
-        {value}
-      </p>
-      {hint && (
-        <p
-          className={`relative mt-0.5 text-[11px] ${
-            highlight ? "text-[#C5EBF7]" : "text-[var(--muted-finexy)]"
-          }`}
-        >
-          {hint}
-        </p>
       )}
     </div>
   )

@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   PieChart,
-  TrendingUp,
   Users,
   PhoneCall,
   MessageSquare,
@@ -32,7 +31,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["gestor", "consultor", "admin"] },
   { href: "/cockpit", label: "Cockpit Temporal", icon: CalendarClock, roles: ["gestor", "admin"] },
   { href: "/relatorios/qualificacoes", label: "Qualificações", icon: PieChart, roles: ["gestor", "consultor", "admin"] },
-  { href: "/relatorios/aproveitamento", label: "Aproveitamento", icon: TrendingUp, roles: ["gestor", "consultor", "admin"] },
   { href: "/agentes", label: "Agentes", icon: Users, roles: ["gestor", "admin"] },
   { href: "/relatorios/chamadas", label: "Chamadas", icon: PhoneCall, roles: ["gestor", "admin"] },
   { href: "/chat", label: "Chat Analítico", icon: MessageSquare, roles: ["gestor", "consultor", "admin"] },

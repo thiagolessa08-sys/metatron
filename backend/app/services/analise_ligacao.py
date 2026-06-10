@@ -89,8 +89,8 @@ def _transcodificar_mp3(audio_bytes: bytes, filename: str) -> tuple[bytes, str]:
     ext = (os.path.splitext(filename)[1].lstrip(".").lower() or "wav")
     # Diagnóstico: loga o cabeçalho para identificar o formato real do arquivo
     head = audio_bytes[:48]
-    logger.info(
-        "Áudio recebido: %s bytes, ext=%s, header_hex=%s, header_ascii=%r",
+    logger.warning(
+        "DIAG audio: %s bytes, ext=%s, header_hex=%s, header_ascii=%r",
         len(audio_bytes), ext, head.hex(), head,
     )
     tmp_in = None

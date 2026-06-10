@@ -8,6 +8,7 @@ import {
   PieChart,
   Users,
   PhoneCall,
+  AudioLines,
   MessageSquare,
   LifeBuoy,
   LogOut,
@@ -33,6 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/relatorios/qualificacoes", label: "Qualificações", icon: PieChart, roles: ["gestor", "consultor", "admin"] },
   { href: "/agentes", label: "Agentes", icon: Users, roles: ["gestor", "admin"] },
   { href: "/relatorios/chamadas", label: "Chamadas", icon: PhoneCall, roles: ["gestor", "admin"] },
+  { href: "/relatorios/analise-ligacao", label: "Análise de Ligação", icon: AudioLines, roles: ["gestor", "admin"] },
   { href: "/chat", label: "Chat Analítico", icon: MessageSquare, roles: ["gestor", "consultor", "admin"] },
   { href: "/sql", label: "SQL Explorer", icon: Terminal, roles: ["admin", "gestor"] },
 ]

@@ -7,7 +7,6 @@ import {
   CheckCircle,
   Clock,
   Megaphone,
-  Tag,
   TrendingUp,
   Trophy,
   Users,
@@ -424,43 +423,48 @@ export default function HomePage() {
             )
           })()}
 
-          {/* KPIs — linha 2 (destaques) */}
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Kpi
-              label="Top campanha"
-              value={data.top_campanha?.nome ?? "—"}
-              hint={
-                data.top_campanha
-                  ? `${data.top_campanha.total.toLocaleString("pt-BR")} ligações`
-                  : "Sem dados"
-              }
-              icon={<Trophy className="h-4 w-4" />}
-              valueSize="md"
-            />
-            <Kpi
-              label="Top operador"
-              value={data.top_operador?.nome ?? "—"}
-              hint={
-                data.top_operador
-                  ? `${data.top_operador.total.toLocaleString("pt-BR")} ligações`
-                  : "Sem dados"
-              }
-              icon={<TrendingUp className="h-4 w-4" />}
-              valueSize="md"
-            />
-            <Kpi
-              label="Qualificação principal"
-              value={data.top_qualificacao?.nome ?? "—"}
-              hint={
-                data.top_qualificacao
-                  ? `${data.top_qualificacao.total.toLocaleString("pt-BR")} ocorrências`
-                  : "Sem dados"
-              }
-              icon={<Tag className="h-4 w-4" />}
-              valueSize="md"
-              highlight
-            />
-          </section>
+          {/* KPIs — linha 2 (destaques de fechamento) */}
+          {(() => {
+            const diaTop = diaSemanaQueMaisFechou(data.volume_diario)
+            return (
+              <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <Kpi
+                  label="Campanha que mais fechou"
+                  value={data.top_campanhas_fechados[0]?.nome ?? "—"}
+                  hint={
+                    data.top_campanhas_fechados[0]
+                      ? `${data.top_campanhas_fechados[0].total.toLocaleString("pt-BR")} fechamentos`
+                      : "Nenhum fechamento no período"
+                  }
+                  icon={<Trophy className="h-4 w-4" />}
+                  valueSize="md"
+                />
+                <Kpi
+                  label="Operador que mais fechou"
+                  value={data.top_operadores_fechados[0]?.nome ?? "—"}
+                  hint={
+                    data.top_operadores_fechados[0]
+                      ? `${data.top_operadores_fechados[0].total.toLocaleString("pt-BR")} fechamentos`
+                      : "Nenhum fechamento no período"
+                  }
+                  icon={<TrendingUp className="h-4 w-4" />}
+                  valueSize="md"
+                />
+                <Kpi
+                  label="Dia da semana que mais fechou"
+                  value={diaTop?.dia ?? "—"}
+                  hint={
+                    diaTop
+                      ? `${diaTop.total.toLocaleString("pt-BR")} fechamentos`
+                      : "Nenhum fechamento no período"
+                  }
+                  icon={<CheckCircle className="h-4 w-4" />}
+                  valueSize="md"
+                  highlight
+                />
+              </section>
+            )
+          })()}
 
           {/* Volume diário + Qualificações */}
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -606,6 +610,28 @@ function MetricToggle({
       ))}
     </div>
   )
+}
+
+const DIAS_SEMANA = [
+  "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado",
+]
+
+/** Soma fechados por dia da semana e retorna o dia campeão. */
+function diaSemanaQueMaisFechou(
+  volume: VolumeDiarioPonto[]
+): { dia: string; total: number } | null {
+  const acc: number[] = [0, 0, 0, 0, 0, 0, 0]
+  let temFechamento = false
+  for (const d of volume) {
+    const dt = parseISO(d.data)
+    if (Number.isNaN(dt.getTime())) continue
+    acc[dt.getDay()] += d.fechados
+    if (d.fechados > 0) temFechamento = true
+  }
+  if (!temFechamento) return null
+  let bestWd = 0
+  for (let i = 1; i < 7; i++) if (acc[i] > acc[bestWd]) bestWd = i
+  return { dia: DIAS_SEMANA[bestWd], total: acc[bestWd] }
 }
 
 function calcTrend(vals: number[]): number | null {

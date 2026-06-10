@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import ReactECharts from "echarts-for-react"
 import {
@@ -54,6 +55,8 @@ interface DashboardResult {
   top_qualificacoes: TopItem[]
   top_campanhas: TopItem[]
   top_operadores: TopItem[]
+  top_campanhas_fechados: TopItem[]
+  top_operadores_fechados: TopItem[]
   top_campanha: TopItem | null
   top_operador: TopItem | null
   top_qualificacao: TopItem | null
@@ -79,8 +82,12 @@ function fmtSeg(s: number): string {
   return `${sec}s`
 }
 
+type RankMetric = "ligacoes" | "fechados"
+
 export default function HomePage() {
   const { period, campanha, operador, empresa, setPeriod } = useFilters()
+  const [campMetric, setCampMetric] = useState<RankMetric>("ligacoes")
+  const [opMetric, setOpMetric] = useState<RankMetric>("fechados")
   const body = {
     data_inicio: period.dataInicio,
     data_fim: period.dataFim,
@@ -241,14 +248,17 @@ export default function HomePage() {
       }
     : null
 
+  const campSource = data
+    ? (campMetric === "fechados" ? data.top_campanhas_fechados : data.top_campanhas)
+    : []
   const campanhasOption = data
     ? {
         tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b>" },
-        grid: { left: 110, right: 20, top: 10, bottom: 25 },
+        grid: { left: 110, right: 30, top: 10, bottom: 25 },
         xAxis: { type: "value", axisLabel: { fontSize: 10 } },
         yAxis: {
           type: "category",
-          data: data.top_campanhas
+          data: campSource
             .slice(0, 5)
             .map((c) => c.nome.length > 18 ? c.nome.slice(0, 17) + "…" : c.nome)
             .reverse(),
@@ -257,8 +267,11 @@ export default function HomePage() {
         series: [
           {
             type: "bar",
-            data: data.top_campanhas.slice(0, 5).map((c) => c.total).reverse(),
-            itemStyle: { color: "#4DC3E8", borderRadius: [0, 8, 8, 0] },
+            data: campSource.slice(0, 5).map((c) => c.total).reverse(),
+            itemStyle: {
+              color: campMetric === "fechados" ? "#16A34A" : "#4DC3E8",
+              borderRadius: [0, 8, 8, 0],
+            },
             barMaxWidth: 22,
             label: {
               show: true,
@@ -271,14 +284,17 @@ export default function HomePage() {
       }
     : null
 
+  const opSource = data
+    ? (opMetric === "fechados" ? data.top_operadores_fechados : data.top_operadores)
+    : []
   const operadoresOption = data
     ? {
         tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b>" },
-        grid: { left: 110, right: 20, top: 10, bottom: 25 },
+        grid: { left: 110, right: 30, top: 10, bottom: 25 },
         xAxis: { type: "value", axisLabel: { fontSize: 10 } },
         yAxis: {
           type: "category",
-          data: data.top_operadores
+          data: opSource
             .slice(0, 5)
             .map((c) => c.nome.length > 18 ? c.nome.slice(0, 17) + "…" : c.nome)
             .reverse(),
@@ -287,8 +303,11 @@ export default function HomePage() {
         series: [
           {
             type: "bar",
-            data: data.top_operadores.slice(0, 5).map((c) => c.total).reverse(),
-            itemStyle: { color: "#111", borderRadius: [0, 8, 8, 0] },
+            data: opSource.slice(0, 5).map((c) => c.total).reverse(),
+            itemStyle: {
+              color: opMetric === "fechados" ? "#16A34A" : "#111",
+              borderRadius: [0, 8, 8, 0],
+            },
             barMaxWidth: 22,
             label: {
               show: true,
@@ -484,14 +503,21 @@ export default function HomePage() {
               className="rounded-[22px] bg-white p-5"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <h2 className="mb-3 text-[18px] font-bold tracking-[-0.01em]">
-                Top 5 campanhas
-              </h2>
-              {campanhasOption && data.top_campanhas.length > 0 ? (
-                <ReactECharts option={campanhasOption} style={{ height: 240 }} />
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="text-[18px] font-bold tracking-[-0.01em]">
+                  Top 5 campanhas
+                </h2>
+                <MetricToggle value={campMetric} onChange={setCampMetric} />
+              </div>
+              {campanhasOption && campSource.length > 0 ? (
+                <ReactECharts
+                  key={campMetric}
+                  option={campanhasOption}
+                  style={{ height: 240 }}
+                />
               ) : (
                 <div className="grid h-[240px] place-items-center text-xs text-[var(--muted-finexy)]">
-                  Sem dados
+                  {campMetric === "fechados" ? "Nenhum fechamento no período" : "Sem dados"}
                 </div>
               )}
             </div>
@@ -500,14 +526,21 @@ export default function HomePage() {
               className="rounded-[22px] bg-white p-5"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <h2 className="mb-3 text-[18px] font-bold tracking-[-0.01em]">
-                Top 5 operadores
-              </h2>
-              {operadoresOption && data.top_operadores.length > 0 ? (
-                <ReactECharts option={operadoresOption} style={{ height: 240 }} />
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="text-[18px] font-bold tracking-[-0.01em]">
+                  Top 5 operadores
+                </h2>
+                <MetricToggle value={opMetric} onChange={setOpMetric} />
+              </div>
+              {operadoresOption && opSource.length > 0 ? (
+                <ReactECharts
+                  key={opMetric}
+                  option={operadoresOption}
+                  style={{ height: 240 }}
+                />
               ) : (
                 <div className="grid h-[240px] place-items-center text-xs text-[var(--muted-finexy)]">
-                  Sem dados
+                  {opMetric === "fechados" ? "Nenhum fechamento no período" : "Sem dados"}
                 </div>
               )}
             </div>
@@ -540,6 +573,37 @@ export default function HomePage() {
           </section>
         </>
       )}
+    </div>
+  )
+}
+
+function MetricToggle({
+  value,
+  onChange,
+}: {
+  value: RankMetric
+  onChange: (v: RankMetric) => void
+}) {
+  const opts: { key: RankMetric; label: string }[] = [
+    { key: "ligacoes", label: "Ligações" },
+    { key: "fechados", label: "Fechados" },
+  ]
+  return (
+    <div className="flex shrink-0 rounded-full bg-[#f3f3f3] p-0.5">
+      {opts.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          onClick={() => onChange(o.key)}
+          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+            value === o.key
+              ? "bg-white text-[var(--ink)] shadow-sm"
+              : "text-[#9a9a9a] hover:text-[#666]"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   )
 }

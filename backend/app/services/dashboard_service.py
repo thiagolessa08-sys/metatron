@@ -249,6 +249,32 @@ async def dashboard_executive(
         if len(r) >= 2
     ][:10]
 
+    # === 10) Top campanhas por fechamento ===
+    sql_camp_fech = (
+        f"SELECT campanha, SUM(CASE WHEN descricao IN ({_in_list(_FECHADOS)}) THEN 1 ELSE 0 END) AS fechados "
+        f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where} "
+        "GROUP BY campanha ORDER BY fechados DESC"
+    )
+    camp_fech_raw = await _try_query(agent, sql_camp_fech, limit=50)
+    top_campanhas_fechados = [
+        TopItem(nome=str(r[0] or "—").strip() or "—", total=_safe_int(r[1]))
+        for r in camp_fech_raw.get("rows", [])
+        if len(r) >= 2 and _safe_int(r[1]) > 0
+    ][:8]
+
+    # === 11) Top operadores por fechamento ===
+    sql_op_fech = (
+        f"SELECT operador, SUM(CASE WHEN descricao IN ({_in_list(_FECHADOS)}) THEN 1 ELSE 0 END) AS fechados "
+        f"FROM metatron.TT_ACIONAMENTOS_METATRON {period_where} "
+        "GROUP BY operador ORDER BY fechados DESC"
+    )
+    op_fech_raw = await _try_query(agent, sql_op_fech, limit=200)
+    top_operadores_fechados = [
+        TopItem(nome=str(r[0] or "—").strip() or "—", total=_safe_int(r[1]))
+        for r in op_fech_raw.get("rows", [])
+        if len(r) >= 2 and _safe_int(r[1]) > 0
+    ][:10]
+
     return DashboardResult(
         total_ligacoes=total_ligacoes,
         fechados_total=fechados_n,
@@ -262,6 +288,8 @@ async def dashboard_executive(
         top_qualificacoes=top_qualificacoes,
         top_campanhas=top_campanhas,
         top_operadores=top_operadores,
+        top_campanhas_fechados=top_campanhas_fechados,
+        top_operadores_fechados=top_operadores_fechados,
         top_campanha=top_campanhas[0] if top_campanhas else None,
         top_operador=top_operadores[0] if top_operadores else None,
         top_qualificacao=top_qualificacoes[0] if top_qualificacoes else None,

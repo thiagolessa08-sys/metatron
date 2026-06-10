@@ -44,6 +44,8 @@ class DashboardResult(BaseModel):
     top_qualificacoes: list[TopItem]
     top_campanhas: list[TopItem]
     top_operadores: list[TopItem]
+    top_campanhas_fechados: list[TopItem]
+    top_operadores_fechados: list[TopItem]
     # Destaques
     top_campanha: TopItem | None
     top_operador: TopItem | None

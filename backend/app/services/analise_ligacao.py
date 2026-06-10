@@ -7,6 +7,7 @@ import json
 import logging
 
 from openai import AsyncOpenAI
+from pydub import AudioSegment
 
 from app.config import settings
 from app.schemas.analise_ligacao import (
@@ -70,12 +71,31 @@ def _client() -> AsyncOpenAI:
     return AsyncOpenAI(api_key=settings.openai_api_key)
 
 
+def _transcodificar_mp3(audio_bytes: bytes) -> tuple[bytes, str]:
+    """
+    Converte o áudio para MP3 16kHz mono via ffmpeg (pydub).
+    Gravações de telefonia (.WAV mu-law/a-law/GSM) muitas vezes não são
+    decodificadas direto pelo Whisper; normalizar resolve.
+    Retorna (bytes, nome). Em caso de falha, devolve o original.
+    """
+    try:
+        audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
+        audio = audio.set_frame_rate(16000).set_channels(1)
+        out = io.BytesIO()
+        audio.export(out, format="mp3", bitrate="64k")
+        return out.getvalue(), "audio.mp3"
+    except Exception as e:
+        logger.warning("Falha ao transcodificar áudio, usando original: %s", e)
+        return audio_bytes, "audio"
+
+
 async def transcrever(audio_bytes: bytes, filename: str) -> str:
     """Transcreve o áudio usando Whisper. Retorna o texto da transcrição."""
     client = _client()
-    # A SDK aceita um file-like com .name para inferir o formato
-    buffer = io.BytesIO(audio_bytes)
-    buffer.name = filename
+    # Normaliza o formato (telefonia → mp3) para garantir que o Whisper decodifique
+    conv_bytes, conv_name = _transcodificar_mp3(audio_bytes)
+    buffer = io.BytesIO(conv_bytes)
+    buffer.name = conv_name
     resp = await client.audio.transcriptions.create(
         model=settings.openai_transcribe_model,
         file=buffer,

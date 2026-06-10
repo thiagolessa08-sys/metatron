@@ -87,12 +87,6 @@ def _transcodificar_mp3(audio_bytes: bytes, filename: str) -> tuple[bytes, str]:
     a extensão para que o Whisper ao menos tente decodificar.
     """
     ext = (os.path.splitext(filename)[1].lstrip(".").lower() or "wav")
-    # Diagnóstico: loga o cabeçalho para identificar o formato real do arquivo
-    head = audio_bytes[:48]
-    logger.warning(
-        "DIAG audio: %s bytes, ext=%s, header_hex=%s, header_ascii=%r",
-        len(audio_bytes), ext, head.hex(), head,
-    )
     tmp_in = None
     try:
         with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as f:

@@ -12,7 +12,10 @@ async function forward(req: NextRequest, segments: string[]): Promise<NextRespon
   })
 
   try {
-    const body = hasBody ? await req.text() : undefined
+    // Repassa o corpo como binário (ArrayBuffer) — usar req.text() corromperia
+    // uploads binários (multipart): bytes >= 0x80 virariam o caractere de
+    // substituição UTF-8 (ef bf bd). JSON continua funcionando normalmente.
+    const body = hasBody ? await req.arrayBuffer() : undefined
     const res = await fetch(url, { method: req.method, headers, body })
 
     const resHeaders = new Headers()

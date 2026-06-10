@@ -12,6 +12,11 @@ class AgentesQuery(BaseModel):
 class AgenteMetrica(BaseModel):
     operador: str
     total_ligacoes: int
+    localizados: int = 0
+    contatados: int = 0
+    agente_nao_tabulou: int = 0
+    negociacao: int = 0
+    fechados: int = 0
     duracao_total_s: int
     duracao_media_s: int
     qualificacoes: dict[str, int]

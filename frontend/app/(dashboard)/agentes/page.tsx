@@ -18,6 +18,11 @@ import { ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react"
 interface AgenteMetrica {
   operador: string
   total_ligacoes: number
+  localizados: number
+  contatados: number
+  agente_nao_tabulou: number
+  negociacao: number
+  fechados: number
   duracao_total_s: number
   duracao_media_s: number
   qualificacoes: Record<string, number>
@@ -28,7 +33,7 @@ interface AgentesResult {
   total_duracao_s: number
 }
 
-type SortKey = "operador" | "total_ligacoes" | "duracao_total_s" | "duracao_media_s"
+type SortKey = "operador" | "total_ligacoes" | "localizados" | "contatados" | "agente_nao_tabulou" | "negociacao" | "fechados" | "duracao_total_s" | "duracao_media_s"
 type SortDir = "asc" | "desc"
 
 function fmtTempo(s: number) {
@@ -92,7 +97,7 @@ function AgentesContent() {
   })
 
   const [busca, setBusca] = useState("")
-  const [sortKey, setSortKey] = useState<SortKey>("total_ligacoes")
+  const [sortKey, setSortKey] = useState<SortKey>("fechados")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
@@ -281,48 +286,45 @@ function AgentesContent() {
                       <span className="sr-only">Comparar</span>
                     </TableHead>
                     <SortHeader label="Operador" sortKey="operador" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortHeader label="Ligações" sortKey="total_ligacoes" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortHeader label="Duração Total" sortKey="duracao_total_s" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortHeader label="Duração Média" sortKey="duracao_media_s" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <TableHead>Ligações/dia</TableHead>
-                    <TableHead>Top Qualificação</TableHead>
+                    <SortHeader label="Total ligações" sortKey="total_ligacoes" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                    <SortHeader label="Localizados" sortKey="localizados" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                    <SortHeader label="Contatados" sortKey="contatados" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                    <SortHeader label="Ag. Não Tabulou" sortKey="agente_nao_tabulou" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                    <SortHeader label="Negociação" sortKey="negociacao" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                    <SortHeader label="Fechados" sortKey="fechados" current={sortKey} dir={sortDir} onSort={toggleSort} />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {itensFiltrados.map((row) => {
-                    const topQual = Object.entries(row.qualificacoes)
-                      .sort((a, b) => b[1] - a[1])[0]
-                    const ligDia = (row.total_ligacoes / diasPeriodo).toFixed(1)
-                    return (
-                      <TableRow key={row.operador}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selecionados.has(row.operador)}
-                            onCheckedChange={() => toggleSelecionado(row.operador)}
-                            aria-label={`Comparar ${row.operador}`}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">{row.operador}</TableCell>
-                        <TableCell className="text-right">
-                          {row.total_ligacoes.toLocaleString("pt-BR")}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
-                          {fmtTempo(row.duracao_total_s)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
-                          {fmtTempo(row.duracao_media_s)}
-                        </TableCell>
-                        <TableCell className="text-right text-sm">{ligDia}</TableCell>
-                        <TableCell>
-                          {topQual ? (
-                            <Badge variant="secondary" className="text-xs max-w-[160px] truncate">
-                              {topQual[0]}
-                            </Badge>
-                          ) : "—"}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
+                  {itensFiltrados.map((row) => (
+                    <TableRow key={row.operador}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selecionados.has(row.operador)}
+                          onCheckedChange={() => toggleSelecionado(row.operador)}
+                          aria-label={`Comparar ${row.operador}`}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{row.operador}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.total_ligacoes.toLocaleString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.localizados.toLocaleString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.contatados.toLocaleString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.agente_nao_tabulou.toLocaleString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.negociacao.toLocaleString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-semibold text-green-700">
+                        {row.fechados.toLocaleString("pt-BR")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
               {itensFiltrados.length === 0 && (

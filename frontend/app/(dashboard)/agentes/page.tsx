@@ -49,6 +49,26 @@ const QUAL_COLORS = [
   "#ec4899", "#6366f1",
 ]
 
+type Tier = "A" | "B" | "C" | "D"
+
+const TIER_CONFIG: Record<Tier, { label: string; bg: string; text: string; hint: string }> = {
+  A: { label: "Operador A", bg: "linear-gradient(180deg,#16a34a 0%,#15803d 100%)", text: "#fff", hint: "Top 25% em fechamentos" },
+  B: { label: "Operador B", bg: "linear-gradient(180deg,#2563eb 0%,#1d4ed8 100%)", text: "#fff", hint: "2º quartil" },
+  C: { label: "Operador C", bg: "linear-gradient(180deg,#d97706 0%,#b45309 100%)", text: "#fff", hint: "3º quartil" },
+  D: { label: "Operador D", bg: "linear-gradient(180deg,#dc2626 0%,#b91c1c 100%)", text: "#fff", hint: "4º quartil" },
+}
+
+function buildTierMap(items: AgenteMetrica[]): Map<string, Tier> {
+  const sorted = [...items].sort((a, b) => b.fechados - a.fechados)
+  const n = sorted.length
+  const map = new Map<string, Tier>()
+  sorted.forEach((item, idx) => {
+    const pct = idx / n
+    map.set(item.operador, pct < 0.25 ? "A" : pct < 0.5 ? "B" : pct < 0.75 ? "C" : "D")
+  })
+  return map
+}
+
 function SortHeader({
   label, sortKey, current, dir, onSort,
 }: {
@@ -128,6 +148,14 @@ function AgentesContent() {
   }, [data])
 
   const top15 = useMemo(() => data?.items.slice(0, 15) ?? [], [data])
+
+  const tierMap = useMemo(() => data ? buildTierMap(data.items) : new Map<string, Tier>(), [data])
+
+  const tierCounts = useMemo(() => {
+    const counts: Record<Tier, number> = { A: 0, B: 0, C: 0, D: 0 }
+    tierMap.forEach(t => { counts[t]++ })
+    return counts
+  }, [tierMap])
 
   const qualChartOption = useMemo(() => ({
     tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
@@ -216,40 +244,33 @@ function AgentesContent() {
 
   return (
     <div className="space-y-6">
-      {/* KPIs */}
+      {/* KPIs — tier de operadores */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="text-white" style={{ background: "linear-gradient(180deg, #4DC3E8 0%, #28ACDB 100%)" }}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs" style={{ color: "rgba(255,255,255,0.75)" }}>Operadores</CardTitle>
-          </CardHeader>
-          <CardContent><p className="text-3xl font-bold text-white">{data.items.length}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Total de Ligações</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{data.total_ligacoes.toLocaleString("pt-BR")}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Duração Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold font-mono">{fmtTempo(data.total_duracao_s)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Média por Agente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold font-mono">
-              {fmtTempo(Math.round(data.total_duracao_s / (data.items.length || 1)))}
-            </p>
-          </CardContent>
-        </Card>
+        {(["A", "B", "C", "D"] as Tier[]).map(tier => {
+          const cfg = TIER_CONFIG[tier]
+          return (
+            <div
+              key={tier}
+              className="relative overflow-hidden rounded-[22px] p-4 text-white"
+              style={{ background: cfg.bg, boxShadow: "var(--shadow-card)" }}
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -bottom-6 -right-6 h-24 w-24 rounded-full"
+                style={{ background: "radial-gradient(circle,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0) 60%)" }}
+              />
+              <p className="relative text-[12px] font-medium" style={{ color: "rgba(255,255,255,0.75)" }}>
+                {cfg.label}
+              </p>
+              <p className="relative mt-2 text-[28px] font-bold tabular-nums tracking-tight">
+                {tierCounts[tier]}
+              </p>
+              <p className="relative mt-0.5 text-[10.5px]" style={{ color: "rgba(255,255,255,0.65)" }}>
+                {cfg.hint}
+              </p>
+            </div>
+          )
+        })}
       </div>
 
       <Tabs defaultValue="tabela">
@@ -285,6 +306,7 @@ function AgentesContent() {
                     <TableHead className="w-8">
                       <span className="sr-only">Comparar</span>
                     </TableHead>
+                    <TableHead>Tier</TableHead>
                     <SortHeader label="Operador" sortKey="operador" current={sortKey} dir={sortDir} onSort={toggleSort} />
                     <SortHeader label="Total ligações" sortKey="total_ligacoes" current={sortKey} dir={sortDir} onSort={toggleSort} />
                     <SortHeader label="Localizados" sortKey="localizados" current={sortKey} dir={sortDir} onSort={toggleSort} />
@@ -295,7 +317,15 @@ function AgentesContent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {itensFiltrados.map((row) => (
+                  {itensFiltrados.map((row) => {
+                    const tier = tierMap.get(row.operador) ?? "D"
+                    const TIER_BADGE: Record<Tier, string> = {
+                      A: "bg-green-100 text-green-800",
+                      B: "bg-blue-100 text-blue-800",
+                      C: "bg-amber-100 text-amber-800",
+                      D: "bg-red-100 text-red-800",
+                    }
+                    return (
                     <TableRow key={row.operador}>
                       <TableCell>
                         <Checkbox
@@ -303,6 +333,11 @@ function AgentesContent() {
                           onCheckedChange={() => toggleSelecionado(row.operador)}
                           aria-label={`Comparar ${row.operador}`}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-bold ${TIER_BADGE[tier]}`}>
+                          {tier}
+                        </span>
                       </TableCell>
                       <TableCell className="font-medium">{row.operador}</TableCell>
                       <TableCell className="text-right tabular-nums">
@@ -324,7 +359,8 @@ function AgentesContent() {
                         {row.fechados.toLocaleString("pt-BR")}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )
+                  })}
                 </TableBody>
               </Table>
               {itensFiltrados.length === 0 && (

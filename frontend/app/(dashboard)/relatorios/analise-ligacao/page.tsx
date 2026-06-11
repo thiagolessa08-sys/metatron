@@ -41,6 +41,38 @@ interface AnaliseResult {
 
 const EXTENSOES = ".mp3,.mp4,.mpeg,.mpga,.m4a,.wav,.webm,.ogg"
 
+/**
+ * Extrai uma mensagem de erro sempre como string. O `detail` do FastAPI pode
+ * ser string, um objeto, ou uma lista de objetos de validação ({type,loc,msg}).
+ * Renderizar qualquer um desses que não seja string quebra o React (erro #31).
+ */
+function extrairMensagemErro(e: unknown): string {
+  const resp = (e as { response?: { data?: { detail?: unknown }; status?: number } })?.response
+  const detail = resp?.data?.detail
+  if (typeof detail === "string" && detail.trim()) return detail
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((d) => (d && typeof d === "object" && "msg" in d ? String((d as { msg: unknown }).msg) : null))
+      .filter(Boolean)
+    if (msgs.length) return msgs.join("; ")
+  }
+  if (detail && typeof detail === "object") {
+    try {
+      return JSON.stringify(detail)
+    } catch {
+      /* */
+    }
+  }
+  if (resp?.status === 422) {
+    return "O arquivo não pôde ser processado (formato inválido ou upload incompleto). Tente um arquivo menor ou outro formato."
+  }
+  if (resp?.status === 413) {
+    return "Áudio muito grande. Reduza o tamanho do arquivo."
+  }
+  if (e instanceof Error && e.message) return e.message
+  return "Falha ao analisar a ligação."
+}
+
 function fmtDuracao(s: number): string {
   if (!s) return "—"
   const m = Math.floor(s / 60)
@@ -111,8 +143,7 @@ export default function AnaliseLigacaoPage() {
       })
       setResultado(data)
     } catch (e) {
-      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setErro(detail ?? (e instanceof Error ? e.message : "Falha ao analisar a ligação."))
+      setErro(extrairMensagemErro(e))
     } finally {
       setProcessando(false)
     }

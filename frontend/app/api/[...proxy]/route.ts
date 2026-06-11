@@ -12,11 +12,17 @@ async function forward(req: NextRequest, segments: string[]): Promise<NextRespon
   })
 
   try {
-    // Repassa o corpo como binário (ArrayBuffer) — usar req.text() corromperia
-    // uploads binários (multipart): bytes >= 0x80 virariam o caractere de
-    // substituição UTF-8 (ef bf bd). JSON continua funcionando normalmente.
-    const body = hasBody ? await req.arrayBuffer() : undefined
-    const res = await fetch(url, { method: req.method, headers, body })
+    // Faz streaming do corpo (ReadableStream) em vez de bufferizar com
+    // arrayBuffer/text. Preserva bytes binários (uploads multipart) e não
+    // trunca/estoura memória em arquivos grandes. Exige duplex: "half".
+    const body = hasBody ? req.body : undefined
+    const init: RequestInit & { duplex?: "half" } = {
+      method: req.method,
+      headers,
+      body,
+    }
+    if (body) init.duplex = "half"
+    const res = await fetch(url, init)
 
     const resHeaders = new Headers()
     res.headers.forEach((v, k) => {

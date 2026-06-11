@@ -41,6 +41,12 @@ interface AnaliseResult {
 
 const EXTENSOES = ".mp3,.mp4,.mpeg,.mpga,.m4a,.wav,.webm,.ogg"
 
+// URL pública do backend. O upload de áudio vai DIRETO ao backend (sem o
+// proxy /api do Next, que trunca uploads grandes). NEXT_PUBLIC_API_URL não é
+// embutida no build do Docker, então usamos a URL fixa como fallback.
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://metatron-production.up.railway.app"
+
 /**
  * Extrai uma mensagem de erro sempre como string. O `detail` do FastAPI pode
  * ser string, um objeto, ou uma lista de objetos de validação ({type,loc,msg}).
@@ -140,9 +146,8 @@ export default function AnaliseLigacaoPage() {
       // Upload direto ao backend (sem o proxy /api do Next), que trunca/limita
       // uploads grandes. NÃO definir Content-Type: o browser põe o boundary do
       // multipart automaticamente.
-      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
       const { data } = await api.post<AnaliseResult>(
-        `${apiBase}/api/analise-ligacao`,
+        `${BACKEND_URL}/api/analise-ligacao`,
         form,
         { timeout: 300000 },
       )

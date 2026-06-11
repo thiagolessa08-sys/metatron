@@ -137,10 +137,15 @@ export default function AnaliseLigacaoPage() {
     try {
       const form = new FormData()
       form.append("file", arquivo)
-      const { data } = await api.post<AnaliseResult>("/api/analise-ligacao", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-        timeout: 180000,
-      })
+      // Upload direto ao backend (sem o proxy /api do Next), que trunca/limita
+      // uploads grandes. NÃO definir Content-Type: o browser põe o boundary do
+      // multipart automaticamente.
+      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+      const { data } = await api.post<AnaliseResult>(
+        `${apiBase}/api/analise-ligacao`,
+        form,
+        { timeout: 300000 },
+      )
       setResultado(data)
     } catch (e) {
       setErro(extrairMensagemErro(e))

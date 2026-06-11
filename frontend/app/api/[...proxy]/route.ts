@@ -12,17 +12,11 @@ async function forward(req: NextRequest, segments: string[]): Promise<NextRespon
   })
 
   try {
-    // Faz streaming do corpo (ReadableStream) em vez de bufferizar com
-    // arrayBuffer/text. Preserva bytes binários (uploads multipart) e não
-    // trunca/estoura memória em arquivos grandes. Exige duplex: "half".
-    const body = hasBody ? req.body : undefined
-    const init: RequestInit & { duplex?: "half" } = {
-      method: req.method,
-      headers,
-      body,
-    }
-    if (body) init.duplex = "half"
-    const res = await fetch(url, init)
+    // Repassa o corpo como binário (ArrayBuffer), preservando bytes — JSON e
+    // payloads pequenos. Uploads grandes (áudio) vão direto ao backend, sem
+    // passar por aqui (ver tela de Análise de Ligação).
+    const body = hasBody ? await req.arrayBuffer() : undefined
+    const res = await fetch(url, { method: req.method, headers, body })
 
     const resHeaders = new Headers()
     res.headers.forEach((v, k) => {

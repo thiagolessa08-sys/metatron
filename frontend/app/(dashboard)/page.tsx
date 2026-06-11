@@ -54,14 +54,29 @@ interface DashboardResult {
   top_qualificacao: TopItem | null
 }
 
-// Cores por etapa do funil (azul claro → escuro; Fechados em verde de sucesso)
-const FUNNEL_COLOR: Record<string, string> = {
-  "Total de ligações": "#9BDCEF",
-  "Localizados": "#5EC7EA",
-  "Agente Não Tabulou": "#AEB6BB",
-  "Contatados": "#28ACDB",
-  "Negociação": "#1784AD",
-  "Fechados": "#16A34A",
+// Degradê por etapa do funil (azul claro → escuro; Fechados em verde de sucesso)
+const FUNNEL_GRADIENT: Record<string, [string, string]> = {
+  "Total de ligações": ["#8ED9F2", "#5EC7EA"],
+  "Localizados": ["#5EC7EA", "#34B5E0"],
+  "Agente Não Tabulou": ["#C3CCD2", "#9AA6AD"],
+  "Contatados": ["#28ACDB", "#1B92BC"],
+  "Negociação": ["#1784AD", "#0F6A8E"],
+  "Fechados": ["#22C55E", "#15803D"],
+}
+
+function funnelGradient(nome: string) {
+  const [from, to] = FUNNEL_GRADIENT[nome] ?? ["#4DC3E8", "#28ACDB"]
+  return {
+    type: "linear",
+    x: 0,
+    y: 0,
+    x2: 0,
+    y2: 1,
+    colorStops: [
+      { offset: 0, color: from },
+      { offset: 1, color: to },
+    ],
+  }
 }
 
 function fmtSeg(s: number): string {
@@ -201,31 +216,56 @@ export default function HomePage() {
         series: [
           {
             type: "funnel",
-            left: "4%",
-            right: "4%",
-            top: 8,
-            bottom: 8,
-            minSize: "14%",
-            maxSize: "100%",
+            left: "3%",
+            right: "3%",
+            top: 10,
+            bottom: 10,
+            // largura mínima maior: o rótulo cabe mesmo nas etapas finais
+            minSize: "34%",
+            maxSize: "96%",
             sort: "descending",
-            gap: 3,
+            gap: 5,
             funnelAlign: "center",
             label: {
               show: true,
               position: "inside",
               color: "#fff",
-              fontSize: 11,
-              fontWeight: 600,
-              formatter: (p: { name: string; value: number }) =>
-                `${p.name}  ${p.value.toLocaleString("pt-BR")}`,
+              fontSize: 12,
+              fontWeight: 700,
+              lineHeight: 17,
+              formatter: (p: { name: string; value: number }) => {
+                const pct = totalFunil > 0 ? ((p.value / totalFunil) * 100).toFixed(1) : "0"
+                return [
+                  `{nome|${p.name}}`,
+                  `{valor|${p.value.toLocaleString("pt-BR")}  ·  ${pct.replace(".", ",")}%}`,
+                ].join("\n")
+              },
+              rich: {
+                nome: { fontSize: 12, fontWeight: 700, color: "#fff", lineHeight: 17 },
+                valor: {
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "rgba(255,255,255,0.85)",
+                  lineHeight: 15,
+                },
+              },
             },
             labelLine: { show: false },
-            itemStyle: { borderColor: "#fff", borderWidth: 2 },
-            emphasis: { label: { fontSize: 12 } },
+            itemStyle: {
+              borderColor: "#fff",
+              borderWidth: 3,
+              shadowBlur: 8,
+              shadowColor: "rgba(15,106,142,0.18)",
+              shadowOffsetY: 3,
+            },
+            emphasis: {
+              label: { fontSize: 13 },
+              itemStyle: { shadowBlur: 14, shadowColor: "rgba(15,106,142,0.3)" },
+            },
             data: (data.funil ?? []).map((f) => ({
               name: f.nome,
               value: f.total,
-              itemStyle: { color: FUNNEL_COLOR[f.nome] ?? "#4DC3E8" },
+              itemStyle: { color: funnelGradient(f.nome) },
             })),
           },
         ],
